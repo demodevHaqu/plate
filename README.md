@@ -4,8 +4,9 @@
 
 ## 주요 기능
 
-- 🔐 **Supabase Auth**: 이메일/비밀번호 인증 및 OAuth 지원
+- 🔐 **Clerk Authentication**: 현대적인 인증 시스템 (이메일/비밀번호, OAuth, 매직 링크 지원)
 - 💾 **Supabase Storage**: 파일 업로드 및 관리
+- 🔗 **Clerk + Supabase 통합**: Clerk JWT 토큰을 통한 Supabase RLS 검증
 - 🏗️ **Next.js 앱 라우터**: 최신 Next.js 앱 라우터 구조 사용
 - 🎨 **ShadcnUI + TailwindCSS**: 현대적이고 커스터마이징 가능한 UI 컴포넌트
 - 🌓 **다크 모드**: 사용자 선호에 따른 테마 전환 지원
@@ -13,11 +14,13 @@
 - 🔍 **SEO 최적화**: 메타데이터, 구조화된 데이터, sitemap.xml, robots.txt 자동 생성
 - 📝 **서버 액션**: Next.js 서버 액션을 활용한 폼 처리 및 파일 업로드
 - 🔒 **보호된 라우트**: 인증 상태에 따른 라우트 보호 구현
+- 🌏 **한국어 지원**: Clerk 한국어 UI 완벽 지원
 
 ## 기술 스택
 
 - [Next.js](https://nextjs.org/)
-- [Supabase](https://supabase.com/) (Auth, Storage)
+- [Clerk](https://clerk.com/) (Authentication)
+- [Supabase](https://supabase.com/) (Database, Storage, RLS)
 - [TailwindCSS](https://tailwindcss.com/)
 - [ShadcnUI](https://ui.shadcn.com/)
 - [TypeScript](https://www.typescriptlang.org/)
@@ -29,7 +32,8 @@
 
 - Node.js 18.17.0 이상
 - pnpm 8.0.0 이상
-- Supabase 프로젝트 (Auth 및 Storage 활성화)
+- Clerk 계정 및 애플리케이션 생성
+- Supabase 프로젝트 (Database 및 Storage 활성화)
 
 ### 설치
 
@@ -54,24 +58,35 @@ pnpm install
 cp .env.example .env
 ```
 
-`.env` 파일에 다음과 같이 환경 변수를 설정합니다:
+`.env.local` 파일에 다음과 같이 환경 변수를 설정합니다:
 
 ```
+# Clerk API Keys
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
+
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL="https://project_id.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
-NEXT_PUBLIC_STORAGE_BUCKET="your_storage_bucket_name" # 스토리지 버킷 이름
+NEXT_PUBLIC_STORAGE_BUCKET="your_storage_bucket_name"
 
-NEXT_PUBLIC_SITE_URL="http://localhost:3000" # 개발 환경 또는 배포 URL
+# Site Configuration
+NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 
+# Supabase Admin (Optional)
 SUPABASE_SERVICE_ROLE="your_supabase_service_role"
 SUPABASE_DB_PASSWORD="your_supabase_db_password"
-
 ```
 
+**필수 환경 변수:**
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: Clerk 공개 키
+- `CLERK_SECRET_KEY`: Clerk 비밀 키
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase 프로젝트 URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase 익명 키
 - `NEXT_PUBLIC_STORAGE_BUCKET`: Supabase 스토리지 버킷 이름 (예: `test-bucket`)
 - `NEXT_PUBLIC_SITE_URL`: 배포할 사이트 URL (개발 시 `http://localhost:3000`)
+
+**선택적 환경 변수:**
 - `SUPABASE_SERVICE_ROLE`: Supabase 서비스 롤 키 (관리자 권한)
 
 **⚠️ 중요: `SUPABASE_SERVICE_ROLE` 사용 시 주의사항**
@@ -97,19 +112,47 @@ pnpm dev
 
 이제 브라우저에서 [http://localhost:3000](http://localhost:3000)으로 접속하여 애플리케이션을 확인할 수 있습니다.
 
+## Clerk 설정
+
+### 1. Clerk 애플리케이션 생성
+
+1. [Clerk](https://clerk.com/)에 가입하고 새 애플리케이션을 생성합니다.
+2. Dashboard에서 API Keys를 찾아 `.env.local` 파일에 추가합니다.
+
+### 2. Clerk Session Token 커스터마이징
+
+1. Clerk Dashboard → Configure → Sessions → Customize session token 으로 이동
+2. 다음 설정을 추가:
+   - **Name**: `__session`
+   - **Claims**:
+     ```json
+     {
+       "role": "authenticated"
+     }
+     ```
+
+### 3. Clerk 도메인 확인
+
+Clerk Dashboard에서 애플리케이션의 도메인을 확인합니다. (예: `your-app.clerk.accounts.dev`)
+
 ## Supabase 설정
 
 ### 1. Supabase 프로젝트 생성
 
 1. [Supabase](https://supabase.com/)에 로그인하고 새 프로젝트를 생성합니다.
-2. 프로젝트 생성 후 프로젝트 설정에서 API URL과 익명 키를 찾아 `.env` 파일에 설정합니다.
+2. 프로젝트 생성 후 프로젝트 설정에서 API URL과 익명 키를 찾아 `.env.local` 파일에 설정합니다.
 
-### 2. 인증 설정
+### 2. Clerk Third-Party Auth 설정
 
-1. Supabase 대시보드에서 Authentication > Settings로 이동합니다.
-2. Site URL을 설정합니다 (배포된 URL 또는 개발 환경에서는 `http://localhost:3000`).
-3. OAuth 제공업체를 설정하려면 Authentication > Providers로 이동하여 원하는 제공업체를 활성화합니다.
-4. Redirect URLs에 `{SITE_URL}/auth/callback`을 추가합니다.
+로컬 개발 환경에서 `supabase/config.toml` 파일에 다음 설정을 추가합니다:
+
+```toml
+[auth.third_party.clerk]
+enabled = true
+domain = "your-app.clerk.accounts.dev"  # Clerk 도메인으로 변경
+```
+
+프로덕션 환경에서는 Supabase Dashboard → Authentication → Providers → Third-Party Auth에서 Clerk를 활성화하고 도메인을 설정합니다.
 
 ### 3. 스토리지 설정
 
@@ -289,46 +332,46 @@ src/
 
 ## 라우트 보호
 
-`src/middleware.ts`는 `src/utils/supabase/middleware.ts`의 `updateSession` 함수를 호출하여 라우트 보호를 처리합니다.
-인증되지 않은 사용자가 보호된 경로에 접근하려고 하면 로그인 페이지(`/login`)로 리디렉션됩니다.
+`src/middleware.ts`는 Clerk 미들웨어를 사용하여 라우트 보호를 처리합니다.
+인증되지 않은 사용자가 보호된 경로에 접근하려고 하면 Clerk 로그인 페이지로 리디렉션됩니다.
 
-보호할 경로는 `src/utils/supabase/middleware.ts` 파일 내의 `updateSession` 함수 안에 있는 `protectedRoutes` 배열을 수정하여 설정할 수 있습니다.
-
-예시:
+보호할 경로는 `src/middleware.ts` 파일의 `isProtectedRoute` 매처를 수정하여 설정할 수 있습니다:
 
 ```typescript
-// src/utils/supabase/middleware.ts
+// src/middleware.ts
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// ... 코드 상단 ...
+const isProtectedRoute = createRouteMatcher([
+  "/profile(.*)",
+  "/dashboard(.*)",
+]);
 
-export async function updateSession(request: NextRequest) {
-  // ... 생략 ...
-
-  // 사용자가 수정할 수 있는 보호된 라우트 목록
-  // 예: const protectedRoutes = ['/profile', '/settings', '/dashboard'];
-  const protectedRoutes = ["/profile"]; // 이 배열을 수정하여 보호할 경로를 추가하거나 변경하세요.
-
-  // 현재 경로가 보호된 라우트인지 확인
-  const isProtectedRoute = protectedRoutes.some((route) =>
-    path.startsWith(route),
-  );
-
-  // 인증이 필요한 페이지에 접근 시 로그인이 되어 있지 않으면 로그인 페이지로 리다이렉션
-  if (isProtectedRoute && !user) {
-    return NextResponse.redirect(new URL("/login", request.url));
+export default clerkMiddleware(async (auth, req) => {
+  if (isProtectedRoute(req)) {
+    await auth.protect();
   }
+});
 
-  // ... 생략 ...
-}
+export const config = {
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
+};
 ```
 
 기본적으로 `/profile` 경로가 보호 설정되어 있습니다.
-필요에 따라 이 배열에 경로를 추가하거나 기존 경로를 수정하여 애플리케이션의 접근 제어를 관리하세요.
-경로는 `startsWith`를 사용하여 매칭되므로, `/admin`을 추가하면 `/admin/users`, `/admin/settings` 등 하위 경로도 모두 보호됩니다.
+경로 패턴에 `(.*)` 를 추가하면 하위 경로도 모두 보호됩니다.
 
 ### 인증 컴포넌트
 
-로그인 및 회원가입 기능은 `src/app/login/page.tsx`에 구현되어 있습니다. 이 페이지는 서버 액션(`src/actions/auth.ts`)을 사용하여 인증 로직을 처리합니다.
+로그인 및 회원가입 기능은 Clerk에서 제공하는 사전 구축된 컴포넌트를 사용합니다:
+
+- `src/app/login/[[...sign-in]]/page.tsx`: Clerk SignIn 컴포넌트 (로그인/회원가입)
+- `src/components/nav/user-nav.tsx`: Clerk UserButton 컴포넌트 (사용자 프로필 메뉴)
+
+Clerk는 이메일/비밀번호, OAuth (Google, GitHub 등), 매직 링크 등 다양한 인증 방법을 지원합니다.
+Clerk Dashboard에서 원하는 인증 방법을 활성화할 수 있습니다.
 
 ### 파일 업로드 및 관리
 

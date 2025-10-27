@@ -1,9 +1,33 @@
 ---
-description: This rule defines unified conventions and best practices for building scalable, maintainable, and consistent fullstack applications with Next.js, covering file naming, directory structure, component architecture, and technology stack guidelines based on React 19 and Next.js 15.
+description: Unified conventions and best practices for scalable Next.js applications with functional programming patterns
 globs: **/*.js,**/*.jsx,**/*.ts,**/*.tsx
 alwaysApply: false
 ---
 # NextJS Convention
+
+## SDK Versions
+
+**Framework & Runtime**:
+- Next.js: 15.x
+- React: 19.x
+- Node.js: 20.x LTS or higher
+- TypeScript: 5.x
+
+**Core Libraries**:
+- Tailwind CSS: 4.x
+- Supabase JS: latest
+- Supabase SSR: latest
+- Zustand: latest
+
+**UI & Styling**:
+- ShadCN UI: latest
+- lucide-react: latest
+
+**Testing**:
+- Vitest: latest
+- Testing Library: latest
+
+**Note**: Keep dependencies up-to-date and verify compatibility before major version upgrades.
 
 ## Package Manager
 
@@ -60,7 +84,7 @@ pnpm을 사용합니다.
 ### src/states
 
 - props drilling을 막기 위한 전역 state를 모아둔다.
-- 전역 상태관리는 최대한 남발하지 않으며 jotai를 사용한다.
+- 전역 상태관리는 최대한 남발하지 않으며 zustand를 사용한다.
 
 ### src/types
 
@@ -134,13 +158,12 @@ test('Page', () => {
 - 아이콘 임포트 방법: `import { IconName } from 'lucide-react';`
 - 예시: `import { Menu, X } from 'lucide-react';`
 
-### Jotai
+### Zustand
 
-- 전역 상태관리는 Jotai를 사용해야 합니다.
-
-### React Query
-
-- 데이터 패칭은 React Query를 사용해야 합니다.
+- 전역 상태관리는 Zustand를 사용해야 합니다.
+- 스토어는 `src/states` 디렉토리에 생성합니다.
+- 작고 독립적인 스토어로 분리하여 관리합니다.
+- 서버 컴포넌트에서 직접 사용할 수 없으므로 클라이언트 컴포넌트에서만 사용합니다.
 
 ### Supabase
 
@@ -186,15 +209,23 @@ Before responding to any request, follow these steps:
        - 구현이 완료되고 안정화된 후에는 디버깅 목적의 로그는 제거하거나, 필요한 경우 최소한으로 유지하는 것을 고려합니다.
    - 각 단계 구현 후에는 충분한 테스트와 검증을 통해 의도한 대로 작동하는지 확인합니다.
 
-## Code Style and Structure
+## Programming Patterns
 
-### General Principles
+### Core Principles
+
+- **Functional Over OOP**: Use functional and declarative programming patterns; avoid classes
+- **Composition Over Inheritance**: Prefer composition and modular design
+- **Immutability**: Maintain data immutability; avoid mutations
+- **Pure Functions**: Keep functions pure with minimal side effects
+- **Modularity**: Break code into small, reusable units; avoid duplication
+
+### Code Organization
 
 - Write concise, readable TypeScript code
-- Use functional and declarative programming patterns
 - Follow DRY (Don't Repeat Yourself) principle
 - Implement early returns for better readability
 - Structure components logically: exports, subcomponents, helpers, types
+- Extract complex logic into separate utility functions
 
 ### Naming Conventions
 
@@ -203,23 +234,26 @@ Before responding to any request, follow these steps:
 - Use lowercase with dashes for directories (components/auth-wizard)
 - Favor named exports for components
 
-### TypeScript Usage
+### TypeScript Best Practices
 
-- Use TypeScript for all code
-- Prefer interfaces over types
-- Avoid enums; use const maps instead
+- Use TypeScript for all code; never use `any` type
+- Prefer interfaces over types for object shapes
+- Avoid enums; use const maps or string unions instead
 - Implement proper type safety and inference
 - Use `satisfies` operator for type validation
+- Define explicit return types for functions
+- Use generics for reusable type-safe functions
 
 ## React 19 and Next.js 15 Best Practices
 
 ### Component Architecture
 
-- Favor React Server Components (RSC) where possible
-- Minimize 'use client' directives
-- Implement proper error boundaries
-- Use Suspense for async operations
-- Optimize for performance and Web Vitals
+- **Server Components First**: Favor React Server Components (RSC) where possible
+- **Client Components**: Minimize 'use client' directives; use only when necessary (interactivity, hooks, browser APIs)
+- **Error Handling**: Implement proper error boundaries with `error.tsx`
+- **Async Components**: Use Suspense for async operations and streaming
+- **Performance**: Optimize for Core Web Vitals (LCP, FID, CLS)
+- **Code Splitting**: Leverage automatic code splitting and dynamic imports
 
 ### Async Request APIs
 
@@ -233,5 +267,22 @@ const { isEnabled } = await draftMode()
 const params = await props.params
 const searchParams = await props.searchParams
 ```
+
+### Security Guidelines
+
+- **Environment Variables**: Never expose secrets; use `NEXT_PUBLIC_` prefix only for client-safe values
+- **Input Validation**: Validate all user inputs using Zod or similar validation library
+- **Authentication**: Use Supabase Auth with proper session management
+- **Authorization**: Implement role-based access control (RBAC) where needed
+- **HTTPS**: Always use HTTPS in production; enforce secure connections
+- **CSP**: Configure Content Security Policy in `next.config.ts`
+
+### Performance Optimization
+
+- **Image Optimization**: Use Next.js `<Image>` component with proper sizing
+- **Font Optimization**: Use `next/font` for optimized font loading
+- **Bundle Analysis**: Regularly analyze bundle size with `@next/bundle-analyzer`
+- **Caching Strategy**: Leverage Next.js caching (fetch, unstable_cache, revalidation)
+- **Database Queries**: Optimize Supabase queries with proper indexing and filtering
 
 <!-- https://github.com/PatrickJS/awesome-cursorrules/blob/main/rules/nextjs15-react19-vercelai-tailwind-cursorrules-prompt-file/.cursorrules -->

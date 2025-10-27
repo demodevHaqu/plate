@@ -39,7 +39,8 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 import { Analytics } from "@vercel/analytics/next";
 import { WebsiteJsonLd, OrganizationJsonLd } from "@/components/seo/JsonLd";
 import { siteConfig } from "@/utils/seo/constants";
-import { AuthProvider } from "@/components/auth/auth-provider";
+import { ClerkProvider } from "@clerk/nextjs";
+import { koKR } from "@clerk/localizations";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -146,23 +147,34 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        suppressHydrationWarning
-      >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
+    <ClerkProvider
+      localization={koKR}
+      appearance={{
+        elements: {
+          formButtonPrimary:
+            "bg-primary text-primary-foreground hover:bg-primary/90",
+          card: "shadow-md",
+        },
+      }}
+    >
+      <html lang="ko" suppressHydrationWarning>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          suppressHydrationWarning
         >
-          <AuthProvider>{children}</AuthProvider>
-        </ThemeProvider>
-        <Analytics />
-        <WebsiteJsonLd />
-        <OrganizationJsonLd />
-      </body>
-    </html>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+          <Analytics />
+          <WebsiteJsonLd />
+          <OrganizationJsonLd />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
