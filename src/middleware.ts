@@ -35,6 +35,9 @@ const isPublicRoute = createRouteMatcher([
   "/login(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",
+  "/products(.*)",      // 상품 목록
+  "/checkout(.*)",      // 결제 주문서
+  "/payment(.*)",       // 결제 성공/실패
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

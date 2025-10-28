@@ -7,6 +7,7 @@
 - 🔐 **Clerk Authentication**: 현대적인 인증 시스템 (이메일/비밀번호, OAuth, 매직 링크 지원)
 - 💾 **Supabase Storage**: 파일 업로드 및 관리
 - 🔗 **Clerk + Supabase 통합**: Clerk JWT 토큰을 통한 Supabase RLS 검증
+- 💳 **토스페이먼츠 결제**: API 개별 연동(결제창 방식)을 활용한 결제 시스템 (카드, 가상계좌, 계좌이체 등)
 - 🏗️ **Next.js 앱 라우터**: 최신 Next.js 앱 라우터 구조 사용
 - 🎨 **ShadcnUI + TailwindCSS**: 현대적이고 커스터마이징 가능한 UI 컴포넌트
 - 🌓 **다크 모드**: 사용자 선호에 따른 테마 전환 지원
@@ -21,6 +22,7 @@
 - [Next.js](https://nextjs.org/)
 - [Clerk](https://clerk.com/) (Authentication)
 - [Supabase](https://supabase.com/) (Database, Storage, RLS)
+- [토스페이먼츠](https://www.tosspayments.com/) (Payment)
 - [TailwindCSS](https://tailwindcss.com/)
 - [ShadcnUI](https://ui.shadcn.com/)
 - [TypeScript](https://www.typescriptlang.org/)
@@ -133,7 +135,23 @@ domain = "your-app-name.clerk.accounts.dev"  # Step 2.4에서 확인한 도메�
 4. "Public bucket"을 체크합니다 (공개 파일 업로드용).
 5. "Create bucket"을 클릭합니다.
 
-### Step 4: 환경 변수 설정
+### Step 4: 데이터베이스 설정
+
+결제 시스템을 사용하려면 데이터베이스 테이블을 생성해야 합니다.
+
+**📖 상세 가이드**: [데이터베이스 설정 가이드](./docs/DATABASE_SETUP.md)
+
+#### 빠른 설정 (Supabase Dashboard 사용)
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) 접속 → 프로젝트 선택
+2. 좌측 메뉴에서 **"SQL Editor"** 클릭
+3. [데이터베이스 설정 가이드](./docs/DATABASE_SETUP.md)의 SQL 스크립트를 복사하여 실행
+
+실행 후 다음 테이블이 생성됩니다:
+- ✅ `products` - 상품 정보
+- ✅ `payments` - 결제 내역
+
+### Step 5: 환경 변수 설정
 
 1. `.env.example` 파일을 `.env.local`로 복사합니다:
 
@@ -156,6 +174,10 @@ NEXT_PUBLIC_STORAGE_BUCKET="your_storage_bucket_name"
 # Site Configuration
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 
+# 토스페이먼츠 Configuration (API 개별 연동)
+NEXT_PUBLIC_TOSS_CLIENT_KEY="test_ck_..."  # API 개별 연동 키 (ck 포함)
+TOSS_SECRET_KEY="test_sk_..."  # API 개별 연동 시크릿 키 (sk 포함)
+
 # Supabase Admin (Optional)
 SUPABASE_SERVICE_ROLE="your_supabase_service_role"
 SUPABASE_DB_PASSWORD="your_supabase_db_password"
@@ -168,6 +190,8 @@ SUPABASE_DB_PASSWORD="your_supabase_db_password"
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase 익명 키
 - `NEXT_PUBLIC_STORAGE_BUCKET`: Supabase 스토리지 버킷 이름 (예: `test-bucket`)
 - `NEXT_PUBLIC_SITE_URL`: 배포할 사이트 URL (개발 시 `http://localhost:3000`)
+- `NEXT_PUBLIC_TOSS_CLIENT_KEY`: 토스페이먼츠 클라이언트 키 (API 개별 연동, test_ck_...)
+- `TOSS_SECRET_KEY`: 토스페이먼츠 시크릿 키 (API 개별 연동, test_sk_...)
 
 **선택적 환경 변수:**
 - `SUPABASE_SERVICE_ROLE`: Supabase 서비스 롤 키 (관리자 권한)
@@ -188,7 +212,28 @@ SUPABASE_DB_PASSWORD="your_supabase_db_password"
 - `SUPABASE_DB_PASSWORD`: Supabase 데이터베이스 비밀번호
 - `SUPABASE_PROJECT_ID`: Supabase 프로젝트 ID (타입 생성용)
 
-### Step 5: SEO 및 사이트 정보 커스터마이징
+### Step 6: 토스페이먼츠 설정 (선택사항)
+
+결제 기능을 사용하려면 토스페이먼츠 API 키가 필요합니다.
+
+**📖 상세 가이드**: [토스페이먼츠 결제 시스템 가이드](./docs/PAYMENT.md)
+
+#### 빠른 설정
+
+1. [토스페이먼츠 개발자센터](https://developers.tosspayments.com/) 접속 및 회원가입
+2. 좌측 사이드바 → **"API 키"** 클릭
+3. **"API 개별 연동 키"** 섹션에서 키 확인:
+   - 클라이언트 키: `test_ck_...` (중간에 `ck` 포함)
+   - 시크릿 키: `test_sk_...` (중간에 `sk` 포함)
+4. `.env.local` 파일에 키 추가:
+   ```bash
+   NEXT_PUBLIC_TOSS_CLIENT_KEY="test_ck_..."
+   TOSS_SECRET_KEY="test_sk_..."
+   ```
+
+> ⚠️ **주의**: "결제위젯 연동 키"(`gck_`/`gsk_`)가 아닌 **"API 개별 연동 키"**(`ck_`/`sk_`)를 사용해야 합니다!
+
+### Step 7: SEO 및 사이트 정보 커스터마이징
 
 **파일**: `src/utils/seo/constants.ts`
 
@@ -206,7 +251,7 @@ export const siteConfig = {
 };
 ```
 
-### Step 6: 개발 서버 실행
+### Step 8: 개발 서버 실행
 
 ```bash
 pnpm dev
@@ -249,6 +294,10 @@ pnpm dev
 - [ ] 보호된 라우트(`/profile`)가 인증되지 않은 사용자를 차단하는지 확인
 - [ ] 파일 업로드 기능이 정상 작동하는지 테스트 (Supabase Storage)
 - [ ] 다크 모드 전환이 정상 작동하는지 확인
+- [ ] 결제 기능 테스트 (토스페이먼츠 연동 시)
+  - [ ] 상품 목록 페이지 (`/products`) 접속 확인
+  - [ ] 결제 프로세스 정상 작동 확인
+  - [ ] 결제 성공/실패 처리 확인
 
 ### 프로덕션 준비
 
@@ -256,6 +305,9 @@ pnpm dev
 - [ ] Supabase 프로젝트의 RLS 정책이 올바르게 설정되었는지 확인
 - [ ] 프로덕션 환경 변수 설정 (Vercel, Netlify 등)
 - [ ] `NEXT_PUBLIC_SITE_URL`을 프로덕션 도메인으로 변경
+- [ ] 토스페이먼츠 프로덕션 키 발급 및 설정 (결제 사용 시)
+  - [ ] 전자결제 신청 및 사업자 등록증 제출
+  - [ ] `test_ck_` → `live_ck_`, `test_sk_` → `live_sk_`로 변경
 
 ---
 
@@ -499,6 +551,155 @@ Clerk Dashboard에서 원하는 인증 방법을 활성화할 수 있습니다.
 - 파일 업로드는 `src/actions/storage.ts` 서버 액션을 사용합니다.
 - Supabase Storage 유틸리티는 `src/utils/supabase/storage.ts`에 있습니다.
 
+### 토스페이먼츠 결제 연동
+
+이 보일러플레이트는 **토스페이먼츠 API 개별 연동(결제창 방식)**을 사용한 결제 시스템을 포함하고 있습니다.
+
+> 💡 **API 개별 연동 vs 결제위젯**
+> - **API 개별 연동**: 사업자 등록 없이 테스트 가능, 결제창이 팝업으로 열림
+> - **결제위젯**: 사업자 등록 필요, 통합 UI 제공
+>
+> 이 보일러플레이트는 누구나 쉽게 테스트할 수 있도록 **API 개별 연동 방식**을 채택했습니다.
+
+#### 🚀 Cursor 커맨드로 빠르게 시작하기
+
+Cursor IDE를 사용한다면, 토스페이먼츠 통합을 더욱 빠르고 쉽게 구축할 수 있습니다!
+
+**방법 1: 올인원 초기화 (권장)**
+```
+/toss-init
+```
+모든 설정을 한 번에 완료합니다 (환경 변수, 타입 정의, 결제 페이지, 검증 API 등).
+
+**방법 2: 단계별 설정 (학습용)**
+```
+/toss-setup      # 1. 환경 설정
+/toss-checkout   # 2. 결제 페이지 생성
+/toss-verify     # 3. 결제 검증 API 생성
+```
+
+각 커맨드의 자세한 사용법은 [`.cursor/commands/toss-payments/README.md`](.cursor/commands/toss-payments/README.md)를 참고하세요.
+
+> 💡 **커맨드 활용 팁**
+> - Cursor 채팅창에서 `/`를 입력하면 사용 가능한 커맨드 목록이 표시됩니다
+> - 각 커맨드는 `@toss-payments.mdc` 규칙을 기반으로 코드를 생성합니다
+> - 생성된 코드는 토스페이먼츠 공식 가이드의 베스트 프랙티스를 따릅니다
+
+#### 1단계: 토스페이먼츠 API 키 발급
+
+1. [토스페이먼츠 개발자센터](https://developers.tosspayments.com/)에 가입/로그인
+2. **API 키** 메뉴로 이동
+3. **API 개별 연동 키** 섹션에서 키 확인
+   - 클라이언트 키: `test_ck_...` (중간에 `ck` 포함)
+   - 시크릿 키: `test_sk_...` (중간에 `sk` 포함)
+
+> ⚠️ **중요**: 결제위젯 연동 키(`gck_`/`gsk_`)가 아닌 **API 개별 연동 키**(`ck_`/`sk_`)를 사용해야 합니다.
+
+#### 2단계: 환경 변수 설정
+
+`.env.local` 파일에 발급받은 키를 추가:
+
+```bash
+NEXT_PUBLIC_TOSS_CLIENT_KEY="test_ck_..."
+TOSS_SECRET_KEY="test_sk_..."
+```
+
+#### 3단계: 데이터베이스 마이그레이션
+
+결제 관련 테이블을 생성:
+
+```bash
+# Supabase에 마이그레이션 적용
+npx supabase db push
+```
+
+또는 Supabase Dashboard의 SQL Editor에서 다음 파일들을 순서대로 실행:
+- `supabase/migrations/20250128000000_create_payment_tables.sql`
+- `supabase/migrations/20250128000001_fix_payment_rls_policies.sql`
+
+#### 주요 기능
+
+1. **상품 목록 페이지** (`/products`)
+   - Supabase에서 상품 목록 조회
+   - 반응형 그리드 레이아웃
+   - 각 상품에 "결제하기" 버튼
+
+2. **결제 주문서 페이지** (`/checkout/[productId]`)
+   - 토스페이먼츠 결제창 호출 (API 개별 연동)
+   - 다양한 결제수단 지원 (카드, 가상계좌, 계좌이체 등)
+   - 결제 전 임시 주문 생성 (데이터 검증)
+   - 결제창은 새 창(팝업)으로 열림
+
+3. **결제 성공/실패 페이지** (`/payment/success`, `/payment/fail`)
+   - 결제 승인 처리
+   - 결제 결과 표시
+   - 상세 정보 및 영수증 링크
+
+#### 주요 파일 구조
+
+```
+src/
+├── actions/
+│   └── payment.ts              # 결제 서버 액션 (승인, 취소, 조회)
+├── app/
+│   ├── products/               # 상품 목록 페이지
+│   ├── checkout/[productId]/   # 결제 주문서 페이지
+│   └── payment/                # 결제 성공/실패 페이지
+├── components/
+│   └── payment/                # 결제 관련 컴포넌트
+│       ├── product-card.tsx
+│       ├── checkout-form.tsx
+│       └── payment-result.tsx
+├── types/
+│   └── payment.ts              # 결제 관련 타입 정의
+└── utils/
+    └── tosspayments/           # 토스페이먼츠 유틸리티
+        ├── client.ts           # SDK 초기화
+        ├── server.ts           # API 호출
+        └── constants.ts        # 상수 정의
+```
+
+#### 테스트 방법
+
+1. 개발 서버 실행:
+```bash
+pnpm dev
+```
+
+2. `/products` 페이지로 이동하여 상품 목록 확인
+
+3. 원하는 상품의 "결제하기" 버튼 클릭
+
+4. 결제수단 선택 및 테스트 정보 입력
+   - **테스트 환경**이므로 실제 결제가 발생하지 않습니다
+   - 모든 결제수단을 자유롭게 테스트할 수 있습니다
+   - 카드 정보는 임의의 값을 입력해도 됩니다
+
+5. 결제 완료 후 성공 페이지에서 결과 확인
+
+#### 커스터마이징
+
+- **상품 추가**: Supabase Dashboard에서 `products` 테이블에 데이터 추가
+- **결제 UI 커스터마이징**: `src/components/payment/checkout-form.tsx` 수정
+- **결제 플로우 수정**: `src/actions/payment.ts`의 서버 액션 수정
+
+#### 프로덕션 배포 시 주의사항
+
+프로덕션에 배포하기 전에 다음을 확인하세요:
+
+1. **토스페이먼츠 계약**
+   - [토스페이먼츠 대시보드](https://dashboard.tosspayments.com)에서 계약 진행
+   - 테스트 키를 프로덕션 키로 교체
+
+2. **환경 변수 업데이트**
+   - `NEXT_PUBLIC_TOSS_CLIENT_KEY`: 프로덕션 클라이언트 키
+   - `TOSS_SECRET_KEY`: 프로덕션 시크릿 키
+   - `NEXT_PUBLIC_SITE_URL`: 실제 도메인
+
+3. **결제 테스트**
+   - 프로덕션 환경에서 소액 테스트 결제 진행
+   - 결제 승인/취소 플로우 검증
+
 ### SEO 최적화
 
 `src/utils/seo` 디렉토리의 유틸리티 함수를 사용하여 페이지별 메타데이터를 설정할 수 있습니다.
@@ -528,30 +729,66 @@ export const metadata = createMetadata({
 
 이 섹션은 AI 기반 개발 도구와의 통합을 위한 고급 설정입니다. 대부분의 사용자에게는 필요하지 않을 수 있습니다.
 
-이 프로젝트는 AI 기반 개발 도구를 위한 MCP 서버 설정을 포함하고 있습니다. `.cursor/mcp.json` 파일에서 설정을 확인할 수 있습니다:
+이 프로젝트는 AI 기반 개발 도구를 위한 MCP 서버 설정을 포함하고 있습니다. 다음 MCP 서버들이 사전 구성되어 있습니다:
+
+- **Sequential Thinking**: 복잡한 문제 해결을 위한 단계적 사고 지원
+- **Context7**: 라이브러리 및 프레임워크 문서 검색
+- **Playwright**: 브라우저 자동화 및 E2E 테스트
+- **Supabase**: Supabase 데이터베이스 및 스토리지 관리
+- **토스페이먼츠**: 결제 연동 가이드 및 API 문서 (v1/v2 지원)
+
+#### Cursor IDE 설정
+
+`.cursor/mcp.json` 파일에서 MCP 서버 설정을 확인할 수 있습니다:
 
 ```json
 {
   "mcpServers": {
     "sequential-thinking": {
-      "command": "bunx",
+      "command": "bun x",
       "args": ["@modelcontextprotocol/server-sequential-thinking"]
     },
     "context7": {
-      "command": "bunx",
+      "command": "bun x",
       "args": ["@upstash/context7-mcp"]
     },
+    "playwright": {
+      "command": "bun x",
+      "args": ["@playwright/mcp@latest"]
+    },
     "supabase": {
-      "command": "bunx",
-      "args": [
-        "@supabase/mcp-server-supabase@latest",
-        "--access-token",
-        // 보안 주의: Supabase 액세스 토큰은 민감한 정보입니다. 이 토큰은 Supabase 프로젝트에 대한 광범위한 접근 권한을 부여할 수 있으므로 안전하게 관리해야 하며, 공개 저장소나 클라이언트 측 코드에 직접 포함해서는 안 됩니다. 환경 변수나 안전한 저장소를 사용하는 것을 권장합니다.
-        "your_supabase_access_token" // 실제 Supabase 액세스 토큰으로 변경
-      ]
+      "command": "bun x",
+      "args": ["@supabase/mcp-server-supabase@latest", "--access-token", "your_supabase_access_token"]
+    },
+    "tosspayments": {
+      "command": "npx",
+      "args": ["-y", "@tosspayments/integration-guide-mcp@latest"]
     }
   }
 }
 ```
 
+#### VS Code 설정
+
+`.vscode/mcp.json` 파일도 함께 제공됩니다. VS Code 사용자는 이 파일을 사용할 수 있습니다.
+
+#### 토스페이먼츠 MCP 서버
+
+토스페이먼츠 MCP 서버는 다음 기능을 제공합니다:
+
+- `get-v2-documents`: v2 API 문서 조회 (기본값)
+- `get-v1-documents`: v1 API 문서 조회 (명시적 요청 시)
+- `document-by-id`: 특정 문서 ID로 전체 내용 조회
+
+**사용 예시:**
+- "토스페이먼츠 결제창 연동 방법 알려줘"
+- "토스페이먼츠 v2 카드 결제 구현 코드 생성해줘"
+- "토스페이먼츠 정기결제 API 스펙 보여줘"
+
+AI 코드 어시스턴트가 토스페이먼츠의 공식 문서를 참조하여 더 정확한 결제 연동 코드를 생성합니다.
+
+#### Supabase MCP 서버 설정
+
 Supabase MCP 서버를 사용하려면 `your_supabase_access_token`을 실제 액세스 토큰으로 변경해야 합니다.
+
+**보안 주의**: Supabase 액세스 토큰은 민감한 정보입니다. 이 토큰은 Supabase 프로젝트에 대한 광범위한 접근 권한을 부여할 수 있으므로 안전하게 관리해야 하며, 공개 저장소나 클라이언트 측 코드에 직접 포함해서는 안 됩니다.
