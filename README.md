@@ -26,39 +26,122 @@
 - [TypeScript](https://www.typescriptlang.org/)
 - [Lucide Icons](https://lucide.dev/)
 
-## 시작하기
+## 🚀 빠른 시작 (Quick Start)
 
 ### 사전 요구사항
 
 - Node.js 18.17.0 이상
 - pnpm 8.0.0 이상
-- Clerk 계정 및 애플리케이션 생성
-- Supabase 프로젝트 (Database 및 Storage 활성화)
 
-### 설치
-
-1. 저장소 클론
+### Step 1: 저장소 클론 및 의존성 설치
 
 ```bash
-git clone https://github.com/your-username/boilerplate.git my-project
+# 1. 저장소 클론
+git clone https://github.com/your-username/nextjs-supabase-boilerplate.git my-project
 cd my-project
-```
 
-2. 의존성 설치
-
-```bash
+# 2. 의존성 설치
 pnpm install
 ```
 
-3. 환경 변수 설정
+### Step 2: Clerk 설정
 
-`.env.example` 파일을 `.env` 파일로 복사하고 필요한 환경 변수를 설정합니다.
+#### 2.1 Clerk 계정 생성 및 애플리케이션 설정
 
-```bash
-cp .env.example .env
+1. [Clerk Dashboard](https://dashboard.clerk.com)에 접속하여 계정을 생성합니다.
+2. "Create Application" 버튼을 클릭합니다.
+3. Application 이름을 입력합니다 (예: `my-awesome-app`).
+4. 사용할 인증 방법을 선택합니다:
+   - ✅ Email (권장)
+   - ✅ Google (선택사항)
+   - ✅ 기타 OAuth 제공자 (필요시)
+
+#### 2.2 Clerk API 키 복사
+
+1. Clerk Dashboard → Configure → API Keys로 이동합니다.
+2. 다음 두 키를 복사해둡니다:
+   - `Publishable Key` (pk_test_...)
+   - `Secret Key` (sk_test_...)
+
+#### 2.3 Clerk Session Token 커스터마이징
+
+**중요**: Supabase와 통합하려면 Clerk JWT에 `role` claim을 추가해야 합니다.
+
+1. Clerk Dashboard → Configure → Sessions로 이동합니다.
+2. "Customize session token" 버튼을 클릭합니다.
+3. 다음 JSON을 입력합니다:
+
+```json
+{
+  "role": "authenticated"
+}
 ```
 
-`.env.local` 파일에 다음과 같이 환경 변수를 설정합니다:
+4. "Save" 버튼을 클릭합니다.
+
+#### 2.4 Clerk 도메인 확인
+
+Clerk Dashboard 상단에서 애플리케이션 도메인을 확인합니다.
+- 형식: `your-app-name.clerk.accounts.dev`
+- 이 도메인은 나중에 Supabase 설정에서 사용됩니다.
+
+### Step 3: Supabase 설정
+
+#### 3.1 Supabase 프로젝트 생성
+
+1. [Supabase Dashboard](https://supabase.com/dashboard)에 접속합니다.
+2. "New Project"를 클릭합니다.
+3. 프로젝트 이름, 데이터베이스 비밀번호, 리전을 설정합니다.
+4. 프로젝트 생성을 기다립니다 (약 2분 소요).
+
+#### 3.2 Supabase API 키 복사
+
+1. 프로젝트 생성 후 Settings → API로 이동합니다.
+2. 다음 정보를 복사해둡니다:
+   - `Project URL` (https://xxxxx.supabase.co)
+   - `anon public` key
+   - `service_role` key (선택사항, 관리자 권한 필요 시)
+
+#### 3.3 Supabase Third-Party Auth 설정
+
+**중요**: Clerk JWT를 Supabase에서 인식하도록 설정합니다.
+
+1. Supabase Dashboard → Authentication → Providers로 이동합니다.
+2. "Third-Party Auth" 섹션에서 "Add Provider"를 클릭합니다.
+3. "Clerk"를 선택합니다.
+4. **Clerk Domain**을 입력합니다 (Step 2.4에서 확인한 도메인):
+   ```
+   your-app-name.clerk.accounts.dev
+   ```
+5. "Save" 버튼을 클릭합니다.
+
+#### 3.4 Supabase 로컬 설정 (supabase/config.toml)
+
+`supabase/config.toml` 파일을 열고 다음 설정을 수정합니다:
+
+```toml
+[auth.third_party.clerk]
+enabled = true
+domain = "your-app-name.clerk.accounts.dev"  # Step 2.4에서 확인한 도메인으로 변경
+```
+
+#### 3.5 Supabase Storage 버킷 생성
+
+1. Supabase Dashboard → Storage로 이동합니다.
+2. "Create a new bucket"을 클릭합니다.
+3. 버킷 이름을 입력합니다 (예: `avatars` 또는 `uploads`).
+4. "Public bucket"을 체크합니다 (공개 파일 업로드용).
+5. "Create bucket"을 클릭합니다.
+
+### Step 4: 환경 변수 설정
+
+1. `.env.example` 파일을 `.env.local`로 복사합니다:
+
+```bash
+cp .env.example .env.local
+```
+
+2. `.env.local` 파일을 열고 다음 값들을 입력합니다:
 
 ```
 # Clerk API Keys
@@ -103,8 +186,27 @@ SUPABASE_DB_PASSWORD="your_supabase_db_password"
 일반적인 사용자 데이터 접근에는 항상 익명 키(`NEXT_PUBLIC_SUPABASE_ANON_KEY`)를 사용하고 RLS 정책을 통해 데이터 접근을 제어하세요.
 
 - `SUPABASE_DB_PASSWORD`: Supabase 데이터베이스 비밀번호
+- `SUPABASE_PROJECT_ID`: Supabase 프로젝트 ID (타입 생성용)
 
-### 개발 서버 실행
+### Step 5: SEO 및 사이트 정보 커스터마이징
+
+**파일**: `src/utils/seo/constants.ts`
+
+```typescript
+export const siteConfig = {
+  name: "Your App Name",  // 앱 이름으로 변경
+  description: "Your app description",
+  keywords: [
+    "Next.js",
+    "Supabase",
+    "Boilerplate",
+    // 프로젝트 관련 키워드 추가
+  ],
+  twitterHandle: "@yourhandle",  // 트위터 핸들로 변경
+};
+```
+
+### Step 6: 개발 서버 실행
 
 ```bash
 pnpm dev
@@ -112,55 +214,70 @@ pnpm dev
 
 이제 브라우저에서 [http://localhost:3000](http://localhost:3000)으로 접속하여 애플리케이션을 확인할 수 있습니다.
 
-## Clerk 설정
+---
 
-### 1. Clerk 애플리케이션 생성
+## ⚠️ 배포 전 체크리스트
 
-1. [Clerk](https://clerk.com/)에 가입하고 새 애플리케이션을 생성합니다.
-2. Dashboard에서 API Keys를 찾아 `.env.local` 파일에 추가합니다.
+보일러플레이트를 프로덕션에 배포하거나 Git에 푸시하기 전에 다음을 확인하세요:
 
-### 2. Clerk Session Token 커스터마이징
+### 보안 체크
 
-1. Clerk Dashboard → Configure → Sessions → Customize session token 으로 이동
-2. 다음 설정을 추가:
-   - **Name**: `__session`
-   - **Claims**:
-     ```json
-     {
-       "role": "authenticated"
-     }
-     ```
+- [ ] `.env.local` 파일이 `.gitignore`에 포함되어 있는지 확인
+- [ ] `.env.local` 파일이 Git에 커밋되지 않았는지 확인
+  ```bash
+  git status  # .env.local이 표시되지 않아야 함
+  ```
+- [ ] `CLERK_SECRET_KEY`, `SUPABASE_SERVICE_ROLE` 등 민감한 키가 코드에 하드코딩되지 않았는지 확인
+- [ ] 공개 저장소인 경우 모든 민감 정보가 제거되었는지 재확인
 
-### 3. Clerk 도메인 확인
+### 설정 체크
 
-Clerk Dashboard에서 애플리케이션의 도메인을 확인합니다. (예: `your-app.clerk.accounts.dev`)
+- [ ] `supabase/config.toml`의 Clerk domain을 **자신의 도메인**으로 변경했는지 확인
+  ```toml
+  [auth.third_party.clerk]
+  enabled = true
+  domain = "your-app-name.clerk.accounts.dev"  # 본인 도메인으로 변경 필수!
+  ```
+- [ ] `src/utils/seo/constants.ts`의 사이트 정보를 **자신의 정보**로 변경했는지 확인
+- [ ] `.env.local`의 모든 플레이스홀더(`your_...`)를 **실제 값**으로 교체했는지 확인
+- [ ] Supabase Storage 버킷이 생성되고 `NEXT_PUBLIC_STORAGE_BUCKET`에 올바른 이름이 설정되었는지 확인
 
-## Supabase 설정
+### 기능 테스트
 
-### 1. Supabase 프로젝트 생성
+- [ ] 로그인/회원가입이 정상 작동하는지 테스트
+- [ ] 로그아웃 기능이 정상 작동하는지 테스트
+- [ ] 보호된 라우트(`/profile`)가 인증되지 않은 사용자를 차단하는지 확인
+- [ ] 파일 업로드 기능이 정상 작동하는지 테스트 (Supabase Storage)
+- [ ] 다크 모드 전환이 정상 작동하는지 확인
 
-1. [Supabase](https://supabase.com/)에 로그인하고 새 프로젝트를 생성합니다.
-2. 프로젝트 생성 후 프로젝트 설정에서 API URL과 익명 키를 찾아 `.env.local` 파일에 설정합니다.
+### 프로덕션 준비
 
-### 2. Clerk Third-Party Auth 설정
+- [ ] Clerk에서 프로덕션 키 발급 (테스트 키 → 프로덕션 키)
+- [ ] Supabase 프로젝트의 RLS 정책이 올바르게 설정되었는지 확인
+- [ ] 프로덕션 환경 변수 설정 (Vercel, Netlify 등)
+- [ ] `NEXT_PUBLIC_SITE_URL`을 프로덕션 도메인으로 변경
 
-로컬 개발 환경에서 `supabase/config.toml` 파일에 다음 설정을 추가합니다:
+---
 
-```toml
-[auth.third_party.clerk]
-enabled = true
-domain = "your-app.clerk.accounts.dev"  # Clerk 도메인으로 변경
-```
+## 🔧 고급 설정
 
-프로덕션 환경에서는 Supabase Dashboard → Authentication → Providers → Third-Party Auth에서 Clerk를 활성화하고 도메인을 설정합니다.
+### Clerk Third-Party Auth (로컬 vs 프로덕션)
 
-### 3. 스토리지 설정
+**로컬 개발 환경**:
+`supabase/config.toml` 파일에서 설정합니다 (Step 3.4 참조).
 
-1. Supabase 대시보드에서 Storage로 이동합니다.
-2. "Create a new bucket"을 클릭하여 새 버킷을 생성합니다.
-3. 버킷 이름을 `.env` 파일의 `NEXT_PUBLIC_STORAGE_BUCKET`에 설정한 이름과 동일하게 지정합니다 (예: `test-bucket`).
-4. **Public access**를 활성화합니다. (이 보일러플레이트는 공개 버킷을 기준으로 작성되었습니다.)
-5. (선택 사항) 스토리지 정책(Policies)을 설정하여 파일 접근 권한을 세밀하게 제어할 수 있습니다. 기본적으로 공개 버킷은 모든 사용자가 파일을 읽을 수 있습니다. 파일 업로드 및 삭제는 보일러플레이트의 서버 액션을 통해 처리됩니다.
+**프로덕션 환경**:
+Supabase Dashboard → Authentication → Providers → Third-Party Auth에서 Clerk를 활성화하고 도메인을 설정합니다.
+
+### Supabase Storage 설정 (상세)
+
+스토리지 버킷 생성은 Step 3.5에서 다루었습니다. 추가 설정이 필요한 경우:
+
+1. Supabase Dashboard → Storage로 이동합니다.
+2. 생성한 버킷을 선택합니다.
+3. (선택 사항) 스토리지 정책(Policies)을 설정하여 파일 접근 권한을 세밀하게 제어할 수 있습니다.
+
+**기본 설정**: 공개 버킷은 모든 사용자가 파일을 읽을 수 있습니다. 파일 업로드 및 삭제는 보일러플레이트의 서버 액션을 통해 처리됩니다.
 
 ## 스토리지 보안 고려사항 (Storage Security Considerations)
 
