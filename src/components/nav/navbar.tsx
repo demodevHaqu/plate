@@ -12,6 +12,13 @@
 import Link from "next/link";
 import { MobileMenu } from "./mobile-menu";
 import DesktopMenu from "./desktop-menu";
+import {
+  UserButton,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+} from "@clerk/nextjs";
 
 export function Navbar() {
   return (
@@ -25,7 +32,33 @@ export function Navbar() {
         </div>
 
         {/* 데스크탑 메뉴 */}
-        <DesktopMenu />
+        <div className="flex items-center gap-4">
+          <DesktopMenu />
+
+          {/* Clerk 인증 버튼들 */}
+          <SignedOut>
+            <SignInButton mode="modal">
+              <button className="text-sm font-medium text-muted-foreground hover:text-primary">
+                로그인
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium">
+                회원가입
+              </button>
+            </SignUpButton>
+          </SignedOut>
+
+          <SignedIn>
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8",
+                },
+              }}
+            />
+          </SignedIn>
+        </div>
       </div>
     </header>
   );

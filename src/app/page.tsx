@@ -17,6 +17,7 @@ import { AlertCircle } from "lucide-react";
 import { Navbar } from "@/components/nav/navbar";
 import { FileUploader } from "@/components/storage/file-uploader";
 import { FileList } from "@/components/storage/file-list";
+import { SupabaseTest } from "@/components/supabase-test";
 
 const BUCKET_NAME = process.env.NEXT_PUBLIC_STORAGE_BUCKET || "test-bucket";
 
@@ -65,10 +66,15 @@ export default function UploadPage() {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Navbar />
 
-      <main className="flex-grow container mx-auto py-8 px-4 sm:px-6">
+      <main className="grow container mx-auto py-8 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto space-y-8">
           <section>
-            <h1 className="text-3xl font-bold mb-6">파일 업로드</h1>
+            <h1 className="text-3xl font-bold mb-6">Supabase 연결 테스트</h1>
+            <SupabaseTest />
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold mb-6">파일 업로드</h2>
 
             <FileUploader
               bucketName={BUCKET_NAME}

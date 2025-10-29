@@ -9,6 +9,7 @@
  * 1. 보호된 경로에 대한 인증 강제
  * 2. 공개 경로 정의
  * 3. Clerk 세션 자동 관리
+ * 4. 인증 상태에 따른 자동 리다이렉션
  *
  * 구현 로직:
  * - clerkMiddleware를 사용하여 Clerk 인증 통합
@@ -27,17 +28,6 @@ const isProtectedRoute = createRouteMatcher([
   "/profile(.*)",
   "/dashboard(.*)",
   // 추가 보호 경로를 여기에 추가
-]);
-
-// 공개 경로 정의 (인증 없이 접근 가능)
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/login(.*)",
-  "/sign-up(.*)",
-  "/api/webhooks(.*)",
-  "/products(.*)",      // 상품 목록
-  "/checkout(.*)",      // 결제 주문서
-  "/payment(.*)",       // 결제 성공/실패
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

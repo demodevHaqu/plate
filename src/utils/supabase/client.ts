@@ -1,6 +1,6 @@
 /**
  * @file client.ts
- * @description Clerk 인증과 통합된 Supabase 클라이언트 초기화 유틸리티
+ * @description Clerk 인증과 통합된 Supabase 브라우저 클라이언트 초기화 유틸리티
  *
  * 이 파일은 클라이언트 측에서 Clerk JWT 토큰을 사용하여 Supabase 서비스에 접근하기 위한
  * 브라우저 클라이언트를 생성합니다.
@@ -9,21 +9,22 @@
  * 1. 브라우저 환경에서 Supabase 클라이언트 인스턴스 생성
  * 2. Clerk JWT 토큰을 Authorization 헤더에 추가
  * 3. 환경 변수를 통한 Supabase URL 및 익명 키 설정
+ * 4. RLS(Row Level Security) 정책과의 통합
  *
  * 구현 로직:
- * - @supabase/ssr 패키지의 createBrowserClient 함수를 사용하여 클라이언트 생성
- * - Clerk의 useAuth 훅을 통해 JWT 토큰 획득
+ * - @supabase/supabase-js 패키지의 createClient 함수를 사용하여 클라이언트 생성
+ * - Clerk의 useSession 훅을 통해 JWT 토큰 획득
  * - 토큰을 Authorization 헤더에 추가하여 Supabase RLS 정책과 통합
  *
  * @dependencies
- * - @supabase/ssr
+ * - @supabase/supabase-js
  * - @clerk/nextjs
  */
 
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
-import { useAuth } from "@clerk/nextjs";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { useSession } from "@clerk/nextjs";
 
 /**
  * Clerk 인증과 통합된 Supabase 브라우저 클라이언트 생성
@@ -37,15 +38,15 @@ import { useAuth } from "@clerk/nextjs";
  * @returns Clerk JWT 토큰이 통합된 Supabase 클라이언트
  */
 export function useSupabaseClient() {
-  const { getToken } = useAuth();
+  const { session } = useSession();
 
-  return createBrowserClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: {
         fetch: async (url: RequestInfo | URL, options: RequestInit = {}) => {
-          const token = await getToken();
+          const token = await session?.getToken();
 
           const headers = new Headers(options?.headers || {});
           if (token) {
@@ -71,9 +72,9 @@ export function useSupabaseClient() {
  *
  * React 컴포넌트 내부에서는 useSupabaseClient()를 사용하세요.
  */
-export function createBrowserSupabaseClient() {
-  return createBrowserClient(
+export function createClient() {
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 }

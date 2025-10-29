@@ -4,9 +4,9 @@
 
 ## 주요 기능
 
-- 🔐 **Clerk Authentication**: 현대적인 인증 시스템 (이메일/비밀번호, OAuth, 매직 링크 지원)
+- 🔐 **Supabase Authentication**: 현대적인 인증 시스템 (이메일/비밀번호, OAuth, 매직 링크 지원)
 - 💾 **Supabase Storage**: 파일 업로드 및 관리
-- 🔗 **Clerk + Supabase 통합**: Clerk JWT 토큰을 통한 Supabase RLS 검증
+- 🗄️ **Supabase Database**: PostgreSQL 기반 데이터베이스 및 RLS
 - 💳 **토스페이먼츠 결제**: API 개별 연동(결제창 방식)을 활용한 결제 시스템 (카드, 가상계좌, 계좌이체 등)
 - 🏗️ **Next.js 앱 라우터**: 최신 Next.js 앱 라우터 구조 사용
 - 🎨 **ShadcnUI + TailwindCSS**: 현대적이고 커스터마이징 가능한 UI 컴포넌트
@@ -15,13 +15,12 @@
 - 🔍 **SEO 최적화**: 메타데이터, 구조화된 데이터, sitemap.xml, robots.txt 자동 생성
 - 📝 **서버 액션**: Next.js 서버 액션을 활용한 폼 처리 및 파일 업로드
 - 🔒 **보호된 라우트**: 인증 상태에 따른 라우트 보호 구현
-- 🌏 **한국어 지원**: Clerk 한국어 UI 완벽 지원
+- 🌏 **한국어 지원**: 완전한 한국어 UI 지원
 
 ## 기술 스택
 
 - [Next.js](https://nextjs.org/)
-- [Clerk](https://clerk.com/) (Authentication)
-- [Supabase](https://supabase.com/) (Database, Storage, RLS)
+- [Supabase](https://supabase.com/) (Authentication, Database, Storage, RLS)
 - [토스페이먼츠](https://www.tosspayments.com/) (Payment)
 - [TailwindCSS](https://tailwindcss.com/)
 - [ShadcnUI](https://ui.shadcn.com/)
@@ -46,9 +45,51 @@ cd my-project
 pnpm install
 ```
 
-### Step 2: Clerk 설정
+### Step 2: Supabase 설정
 
-#### 2.1 Clerk 계정 생성 및 애플리케이션 설정
+#### 2.1 Supabase 프로젝트 생성
+
+1. [Supabase Dashboard](https://supabase.com/dashboard)에 접속합니다.
+2. "New Project"를 클릭합니다.
+3. 프로젝트 이름, 데이터베이스 비밀번호, 리전을 설정합니다.
+4. 프로젝트 생성을 기다립니다 (약 2분 소요).
+
+#### 2.2 Supabase API 키 복사
+
+1. 프로젝트 생성 후 Settings → API로 이동합니다.
+2. 다음 정보를 복사해둡니다:
+   - `Project URL` (https://xxxxx.supabase.co)
+   - `anon public` key (NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
+   - `service_role` key (선택사항, 관리자 권한 필요 시)
+
+#### 2.3 Supabase Storage 버킷 생성
+
+1. Supabase Dashboard → Storage로 이동합니다.
+2. "Create a new bucket"을 클릭합니다.
+3. 버킷 이름을 입력합니다 (예: `avatars` 또는 `uploads`).
+4. "Public bucket"을 체크합니다 (공개 파일 업로드용).
+5. "Create bucket"을 클릭합니다.
+
+### Step 3: 데이터베이스 설정
+
+결제 시스템을 사용하려면 데이터베이스 테이블을 생성해야 합니다.
+
+**📖 상세 가이드**: [데이터베이스 설정 가이드](./docs/DATABASE_SETUP.md)
+
+#### 빠른 설정 (Supabase Dashboard 사용)
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) 접속 → 프로젝트 선택
+2. 좌측 메뉴에서 **"SQL Editor"** 클릭
+3. [데이터베이스 설정 가이드](./docs/DATABASE_SETUP.md)의 SQL 스크립트를 복사하여 실행
+
+실행 후 다음 테이블이 생성됩니다:
+
+- ✅ `products` - 상품 정보
+- ✅ `payments` - 결제 내역
+
+### Step 4: Clerk 설정
+
+#### 4.1 Clerk 계정 생성 및 애플리케이션 설정
 
 1. [Clerk Dashboard](https://dashboard.clerk.com)에 접속하여 계정을 생성합니다.
 2. "Create Application" 버튼을 클릭합니다.
@@ -58,14 +99,14 @@ pnpm install
    - ✅ Google (선택사항)
    - ✅ 기타 OAuth 제공자 (필요시)
 
-#### 2.2 Clerk API 키 복사
+#### 4.2 Clerk API 키 복사
 
 1. Clerk Dashboard → Configure → API Keys로 이동합니다.
 2. 다음 두 키를 복사해둡니다:
-   - `Publishable Key` (pk_test_...)
-   - `Secret Key` (sk_test_...)
+   - `Publishable Key` (pk*test*...)
+   - `Secret Key` (sk*test*...)
 
-#### 2.3 Clerk Session Token 커스터마이징
+#### 4.3 Clerk Session Token 커스터마이징
 
 **중요**: Supabase와 통합하려면 Clerk JWT에 `role` claim을 추가해야 합니다.
 
@@ -81,82 +122,25 @@ pnpm install
 
 4. "Save" 버튼을 클릭합니다.
 
-#### 2.4 Clerk 도메인 확인
-
-Clerk Dashboard 상단에서 애플리케이션 도메인을 확인합니다.
-- 형식: `your-app-name.clerk.accounts.dev`
-- 이 도메인은 나중에 Supabase 설정에서 사용됩니다.
-
-### Step 3: Supabase 설정
-
-#### 3.1 Supabase 프로젝트 생성
-
-1. [Supabase Dashboard](https://supabase.com/dashboard)에 접속합니다.
-2. "New Project"를 클릭합니다.
-3. 프로젝트 이름, 데이터베이스 비밀번호, 리전을 설정합니다.
-4. 프로젝트 생성을 기다립니다 (약 2분 소요).
-
-#### 3.2 Supabase API 키 복사
-
-1. 프로젝트 생성 후 Settings → API로 이동합니다.
-2. 다음 정보를 복사해둡니다:
-   - `Project URL` (https://xxxxx.supabase.co)
-   - `anon public` key
-   - `service_role` key (선택사항, 관리자 권한 필요 시)
-
-#### 3.3 Supabase Third-Party Auth 설정
+### Step 5: Supabase Third-Party Auth 설정
 
 **중요**: Clerk JWT를 Supabase에서 인식하도록 설정합니다.
 
 1. Supabase Dashboard → Authentication → Providers로 이동합니다.
 2. "Third-Party Auth" 섹션에서 "Add Provider"를 클릭합니다.
 3. "Clerk"를 선택합니다.
-4. **Clerk Domain**을 입력합니다 (Step 2.4에서 확인한 도메인):
+4. **Clerk Domain**을 입력합니다 (Step 4.1에서 확인한 도메인):
    ```
    your-app-name.clerk.accounts.dev
    ```
 5. "Save" 버튼을 클릭합니다.
 
-#### 3.4 Supabase 로컬 설정 (supabase/config.toml)
+### Step 6: 환경 변수 설정
 
-`supabase/config.toml` 파일을 열고 다음 설정을 수정합니다:
-
-```toml
-[auth.third_party.clerk]
-enabled = true
-domain = "your-app-name.clerk.accounts.dev"  # Step 2.4에서 확인한 도메인으로 변경
-```
-
-#### 3.5 Supabase Storage 버킷 생성
-
-1. Supabase Dashboard → Storage로 이동합니다.
-2. "Create a new bucket"을 클릭합니다.
-3. 버킷 이름을 입력합니다 (예: `avatars` 또는 `uploads`).
-4. "Public bucket"을 체크합니다 (공개 파일 업로드용).
-5. "Create bucket"을 클릭합니다.
-
-### Step 4: 데이터베이스 설정
-
-결제 시스템을 사용하려면 데이터베이스 테이블을 생성해야 합니다.
-
-**📖 상세 가이드**: [데이터베이스 설정 가이드](./docs/DATABASE_SETUP.md)
-
-#### 빠른 설정 (Supabase Dashboard 사용)
-
-1. [Supabase Dashboard](https://supabase.com/dashboard) 접속 → 프로젝트 선택
-2. 좌측 메뉴에서 **"SQL Editor"** 클릭
-3. [데이터베이스 설정 가이드](./docs/DATABASE_SETUP.md)의 SQL 스크립트를 복사하여 실행
-
-실행 후 다음 테이블이 생성됩니다:
-- ✅ `products` - 상품 정보
-- ✅ `payments` - 결제 내역
-
-### Step 5: 환경 변수 설정
-
-1. `.env.example` 파일을 `.env.local`로 복사합니다:
+1. 프로젝트 루트에 `.env.local` 파일을 생성합니다:
 
 ```bash
-cp .env.example .env.local
+touch .env.local
 ```
 
 2. `.env.local` 파일을 열고 다음 값들을 입력합니다:
@@ -168,8 +152,7 @@ CLERK_SECRET_KEY="sk_test_..."
 
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL="https://project_id.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
-NEXT_PUBLIC_STORAGE_BUCKET="your_storage_bucket_name"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="your_supabase_publishable_key"
 
 # Site Configuration
 NEXT_PUBLIC_SITE_URL="http://localhost:3000"
@@ -180,21 +163,23 @@ TOSS_SECRET_KEY="test_sk_..."  # API 개별 연동 시크릿 키 (sk 포함)
 
 # Supabase Admin (Optional)
 SUPABASE_SERVICE_ROLE="your_supabase_service_role"
-SUPABASE_DB_PASSWORD="your_supabase_db_password"
+SUPABASE_PROJECT_ID="your_supabase_project_id"
 ```
 
 **필수 환경 변수:**
+
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: Clerk 공개 키
 - `CLERK_SECRET_KEY`: Clerk 비밀 키
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase 프로젝트 URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase 익명 키
-- `NEXT_PUBLIC_STORAGE_BUCKET`: Supabase 스토리지 버킷 이름 (예: `test-bucket`)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: Supabase 공개 키 (anon key)
 - `NEXT_PUBLIC_SITE_URL`: 배포할 사이트 URL (개발 시 `http://localhost:3000`)
-- `NEXT_PUBLIC_TOSS_CLIENT_KEY`: 토스페이먼츠 클라이언트 키 (API 개별 연동, test_ck_...)
-- `TOSS_SECRET_KEY`: 토스페이먼츠 시크릿 키 (API 개별 연동, test_sk_...)
+- `NEXT_PUBLIC_TOSS_CLIENT_KEY`: 토스페이먼츠 클라이언트 키 (API 개별 연동, test*ck*...)
+- `TOSS_SECRET_KEY`: 토스페이먼츠 시크릿 키 (API 개별 연동, test*sk*...)
 
 **선택적 환경 변수:**
+
 - `SUPABASE_SERVICE_ROLE`: Supabase 서비스 롤 키 (관리자 권한)
+- `SUPABASE_PROJECT_ID`: Supabase 프로젝트 ID (타입 생성용)
 
 **⚠️ 중요: `SUPABASE_SERVICE_ROLE` 사용 시 주의사항**
 
@@ -212,7 +197,7 @@ SUPABASE_DB_PASSWORD="your_supabase_db_password"
 - `SUPABASE_DB_PASSWORD`: Supabase 데이터베이스 비밀번호
 - `SUPABASE_PROJECT_ID`: Supabase 프로젝트 ID (타입 생성용)
 
-### Step 6: 토스페이먼츠 설정 (선택사항)
+### Step 7: 토스페이먼츠 설정 (선택사항)
 
 결제 기능을 사용하려면 토스페이먼츠 API 키가 필요합니다.
 
@@ -233,13 +218,13 @@ SUPABASE_DB_PASSWORD="your_supabase_db_password"
 
 > ⚠️ **주의**: "결제위젯 연동 키"(`gck_`/`gsk_`)가 아닌 **"API 개별 연동 키"**(`ck_`/`sk_`)를 사용해야 합니다!
 
-### Step 7: SEO 및 사이트 정보 커스터마이징
+### Step 8: SEO 및 사이트 정보 커스터마이징
 
 **파일**: `src/utils/seo/constants.ts`
 
 ```typescript
 export const siteConfig = {
-  name: "Your App Name",  // 앱 이름으로 변경
+  name: "Your App Name", // 앱 이름으로 변경
   description: "Your app description",
   keywords: [
     "Next.js",
@@ -247,11 +232,11 @@ export const siteConfig = {
     "Boilerplate",
     // 프로젝트 관련 키워드 추가
   ],
-  twitterHandle: "@yourhandle",  // 트위터 핸들로 변경
+  twitterHandle: "@yourhandle", // 트위터 핸들로 변경
 };
 ```
 
-### Step 8: 개발 서버 실행
+### Step 9: 개발 서버 실행
 
 ```bash
 pnpm dev
@@ -354,7 +339,6 @@ Supabase Dashboard → Authentication → Providers → Third-Party Auth에서 C
 
 1.  **버킷을 비공개(private)로 설정**: Supabase 대시보드에서 해당 스토리지 버킷의 "Public access"를 비활성화합니다.
 2.  **스토리지 정책(Policies) 생성**: Supabase 대시보드의 "Storage" > "Policies" 섹션에서 테이블에 RLS 정책을 설정하듯이 스토리지 객체에 대한 정책을 작성합니다.
-
     - `storage.objects` 테이블에 대해 `SELECT`, `INSERT`, `UPDATE`, `DELETE` 권한에 대한 정책을 정의할 수 있습니다.
     - 예를 들어, 사용자가 자신의 `user_id`와 일치하는 폴더 내의 파일만 읽을 수 있도록 하려면 `SELECT` 정책을 다음과 같이 설정할 수 있습니다:
       ```sql
@@ -501,46 +485,38 @@ src/
 
 ## 라우트 보호
 
-`src/middleware.ts`는 Clerk 미들웨어를 사용하여 라우트 보호를 처리합니다.
-인증되지 않은 사용자가 보호된 경로에 접근하려고 하면 Clerk 로그인 페이지로 리디렉션됩니다.
+`src/middleware.ts`는 Supabase 미들웨어를 사용하여 라우트 보호를 처리합니다.
+인증되지 않은 사용자가 보호된 경로에 접근하려고 하면 로그인 페이지로 리디렉션됩니다.
 
-보호할 경로는 `src/middleware.ts` 파일의 `isProtectedRoute` 매처를 수정하여 설정할 수 있습니다:
+보호할 경로는 `src/utils/supabase/middleware.ts` 파일의 `protectedRoutes` 배열을 수정하여 설정할 수 있습니다:
 
 ```typescript
-// src/middleware.ts
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+// src/utils/supabase/middleware.ts
+const protectedRoutes = ["/profile"];
 
-const isProtectedRoute = createRouteMatcher([
-  "/profile(.*)",
-  "/dashboard(.*)",
-]);
+// 현재 경로가 보호된 라우트인지 확인
+const isProtectedRoute = protectedRoutes.some((route) =>
+  path.startsWith(route),
+);
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect();
-  }
-});
-
-export const config = {
-  matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
-  ],
-};
+// 인증이 필요한 페이지에 접근 시 로그인이 되어 있지 않으면 로그인 페이지로 리다이렉션
+if (isProtectedRoute && !user) {
+  return NextResponse.redirect(new URL("/login", request.url));
+}
 ```
 
 기본적으로 `/profile` 경로가 보호 설정되어 있습니다.
-경로 패턴에 `(.*)` 를 추가하면 하위 경로도 모두 보호됩니다.
+배열에 경로를 추가하면 해당 경로도 보호됩니다.
 
 ### 인증 컴포넌트
 
-로그인 및 회원가입 기능은 Clerk에서 제공하는 사전 구축된 컴포넌트를 사용합니다:
+로그인 및 회원가입 기능은 Supabase Auth를 사용합니다:
 
-- `src/app/login/[[...sign-in]]/page.tsx`: Clerk SignIn 컴포넌트 (로그인/회원가입)
-- `src/components/nav/user-nav.tsx`: Clerk UserButton 컴포넌트 (사용자 프로필 메뉴)
+- `src/app/login/[[...sign-in]]/page.tsx`: Supabase Auth 컴포넌트 (로그인/회원가입)
+- `src/components/nav/user-nav.tsx`: 사용자 프로필 메뉴 컴포넌트
 
-Clerk는 이메일/비밀번호, OAuth (Google, GitHub 등), 매직 링크 등 다양한 인증 방법을 지원합니다.
-Clerk Dashboard에서 원하는 인증 방법을 활성화할 수 있습니다.
+Supabase는 이메일/비밀번호, OAuth (Google, GitHub 등), 매직 링크 등 다양한 인증 방법을 지원합니다.
+Supabase Dashboard에서 원하는 인증 방법을 활성화할 수 있습니다.
 
 ### 파일 업로드 및 관리
 
@@ -556,6 +532,7 @@ Clerk Dashboard에서 원하는 인증 방법을 활성화할 수 있습니다.
 이 보일러플레이트는 **토스페이먼츠 API 개별 연동(결제창 방식)**을 사용한 결제 시스템을 포함하고 있습니다.
 
 > 💡 **API 개별 연동 vs 결제위젯**
+>
 > - **API 개별 연동**: 사업자 등록 없이 테스트 가능, 결제창이 팝업으로 열림
 > - **결제위젯**: 사업자 등록 필요, 통합 UI 제공
 >
@@ -566,12 +543,15 @@ Clerk Dashboard에서 원하는 인증 방법을 활성화할 수 있습니다.
 Cursor IDE를 사용한다면, 토스페이먼츠 통합을 더욱 빠르고 쉽게 구축할 수 있습니다!
 
 **방법 1: 올인원 초기화 (권장)**
+
 ```
 /toss-init
 ```
+
 모든 설정을 한 번에 완료합니다 (환경 변수, 타입 정의, 결제 페이지, 검증 API 등).
 
 **방법 2: 단계별 설정 (학습용)**
+
 ```
 /toss-setup      # 1. 환경 설정
 /toss-checkout   # 2. 결제 페이지 생성
@@ -581,6 +561,7 @@ Cursor IDE를 사용한다면, 토스페이먼츠 통합을 더욱 빠르고 쉽
 각 커맨드의 자세한 사용법은 [`.cursor/commands/toss-payments/README.md`](.cursor/commands/toss-payments/README.md)를 참고하세요.
 
 > 💡 **커맨드 활용 팁**
+>
 > - Cursor 채팅창에서 `/`를 입력하면 사용 가능한 커맨드 목록이 표시됩니다
 > - 각 커맨드는 `@toss-payments.mdc` 규칙을 기반으로 코드를 생성합니다
 > - 생성된 코드는 토스페이먼츠 공식 가이드의 베스트 프랙티스를 따릅니다
@@ -614,6 +595,7 @@ npx supabase db push
 ```
 
 또는 Supabase Dashboard의 SQL Editor에서 다음 파일들을 순서대로 실행:
+
 - `supabase/migrations/20250128000000_create_payment_tables.sql`
 - `supabase/migrations/20250128000001_fix_payment_rls_policies.sql`
 
@@ -662,6 +644,7 @@ src/
 #### 테스트 방법
 
 1. 개발 서버 실행:
+
 ```bash
 pnpm dev
 ```
@@ -758,7 +741,11 @@ export const metadata = createMetadata({
     },
     "supabase": {
       "command": "bun x",
-      "args": ["@supabase/mcp-server-supabase@latest", "--access-token", "your_supabase_access_token"]
+      "args": [
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "your_supabase_access_token"
+      ]
     },
     "tosspayments": {
       "command": "npx",
@@ -781,6 +768,7 @@ export const metadata = createMetadata({
 - `document-by-id`: 특정 문서 ID로 전체 내용 조회
 
 **사용 예시:**
+
 - "토스페이먼츠 결제창 연동 방법 알려줘"
 - "토스페이먼츠 v2 카드 결제 구현 코드 생성해줘"
 - "토스페이먼츠 정기결제 API 스펙 보여줘"

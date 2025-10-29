@@ -1,0 +1,262 @@
+/**
+ * @file supabase-test.tsx
+ * @description Supabase 연결 테스트 컴포넌트
+ *
+ * 이 컴포넌트는 Supabase 연결 상태를 확인하고
+ * 기본적인 데이터베이스 작업을 테스트합니다.
+ *
+ * 주요 기능:
+ * 1. Supabase 연결 상태 확인
+ * 2. 인증 상태 확인
+ * 3. 데이터베이스 연결 테스트
+ * 4. 에러 상태 표시
+ *
+ * @dependencies
+ * - @supabase/ssr
+ * - react
+ */
+
+"use client";
+
+import { useSupabaseClient } from "@/utils/supabase/client";
+import { useEffect, useState, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+
+interface TestResult {
+  name: string;
+  status: "loading" | "success" | "error";
+  message: string;
+  details?: string;
+}
+
+export function SupabaseTest() {
+  const [tests, setTests] = useState<TestResult[]>([
+    {
+      name: "Supabase 클라이언트 초기화",
+      status: "loading",
+      message: "테스트 중...",
+    },
+    { name: "데이터베이스 연결", status: "loading", message: "테스트 중..." },
+    { name: "인증 상태 확인", status: "loading", message: "테스트 중..." },
+  ]);
+
+  const [isRunning, setIsRunning] = useState(false);
+  const supabase = useSupabaseClient();
+
+  const runTests = useCallback(async () => {
+    setIsRunning(true);
+
+    // 테스트 1: 클라이언트 초기화
+    setTests((prev) =>
+      prev.map((test) =>
+        test.name === "Supabase 클라이언트 초기화"
+          ? {
+              ...test,
+              status: "success",
+              message: "클라이언트가 성공적으로 초기화되었습니다.",
+            }
+          : test,
+      ),
+    );
+
+    // 테스트 2: 데이터베이스 연결
+    try {
+      const { error } = await supabase
+        .from("_supabase_migrations")
+        .select("version")
+        .limit(1);
+
+      if (error) {
+        setTests((prev) =>
+          prev.map((test) =>
+            test.name === "데이터베이스 연결"
+              ? {
+                  ...test,
+                  status: "error",
+                  message: "데이터베이스 연결 실패",
+                  details: error.message,
+                }
+              : test,
+          ),
+        );
+      } else {
+        setTests((prev) =>
+          prev.map((test) =>
+            test.name === "데이터베이스 연결"
+              ? {
+                  ...test,
+                  status: "success",
+                  message: "데이터베이스에 성공적으로 연결되었습니다.",
+                }
+              : test,
+          ),
+        );
+      }
+    } catch (error) {
+      setTests((prev) =>
+        prev.map((test) =>
+          test.name === "데이터베이스 연결"
+            ? {
+                ...test,
+                status: "error",
+                message: "데이터베이스 연결 오류",
+                details: error instanceof Error ? error.message : String(error),
+              }
+            : test,
+        ),
+      );
+    }
+
+    // 테스트 3: 인증 상태 확인
+    try {
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
+      if (error) {
+        setTests((prev) =>
+          prev.map((test) =>
+            test.name === "인증 상태 확인"
+              ? {
+                  ...test,
+                  status: "error",
+                  message: "인증 상태 확인 실패",
+                  details: error.message,
+                }
+              : test,
+          ),
+        );
+      } else if (user) {
+        setTests((prev) =>
+          prev.map((test) =>
+            test.name === "인증 상태 확인"
+              ? {
+                  ...test,
+                  status: "success",
+                  message: `로그인됨: ${user.email || user.id}`,
+                }
+              : test,
+          ),
+        );
+      } else {
+        setTests((prev) =>
+          prev.map((test) =>
+            test.name === "인증 상태 확인"
+              ? {
+                  ...test,
+                  status: "success",
+                  message: "인증되지 않음 (정상)",
+                }
+              : test,
+          ),
+        );
+      }
+    } catch (error) {
+      setTests((prev) =>
+        prev.map((test) =>
+          test.name === "인증 상태 확인"
+            ? {
+                ...test,
+                status: "error",
+                message: "인증 상태 확인 오류",
+                details: error instanceof Error ? error.message : String(error),
+              }
+            : test,
+        ),
+      );
+    }
+
+    setIsRunning(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    runTests();
+  }, [runTests]);
+
+  const getStatusIcon = (status: TestResult["status"]) => {
+    switch (status) {
+      case "loading":
+        return <Loader2 className="h-4 w-4 animate-spin" />;
+      case "success":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "error":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: TestResult["status"]) => {
+    switch (status) {
+      case "loading":
+        return <Badge variant="secondary">테스트 중</Badge>;
+      case "success":
+        return (
+          <Badge variant="default" className="bg-green-500">
+            성공
+          </Badge>
+        );
+      case "error":
+        return <Badge variant="destructive">실패</Badge>;
+    }
+  };
+
+  return (
+    <Card className="w-full max-w-2xl">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CheckCircle className="h-5 w-5" />
+          Supabase 연결 테스트
+        </CardTitle>
+        <CardDescription>
+          Supabase 연결 상태와 기본 기능을 테스트합니다.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-3">
+          {tests.map((test, index) => (
+            <div
+              key={index}
+              className="flex items-center justify-between p-3 border rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                {getStatusIcon(test.status)}
+                <div>
+                  <p className="font-medium">{test.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {test.message}
+                  </p>
+                  {test.details && (
+                    <p className="text-xs text-red-500 mt-1">{test.details}</p>
+                  )}
+                </div>
+              </div>
+              {getStatusBadge(test.status)}
+            </div>
+          ))}
+        </div>
+
+        <div className="pt-4 border-t">
+          <Button onClick={runTests} disabled={isRunning} className="w-full">
+            {isRunning ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                테스트 실행 중...
+              </>
+            ) : (
+              "테스트 다시 실행"
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

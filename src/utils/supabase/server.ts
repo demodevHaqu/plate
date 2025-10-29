@@ -11,22 +11,19 @@
  * 3. 관리자 권한(service role)을 가진 Supabase 클라이언트 생성
  *
  * 구현 로직:
- * - Next.js의 cookies API를 사용하여 쿠키 관리
+ * - @supabase/supabase-js 패키지의 createClient 함수를 사용하여 클라이언트 생성
  * - Clerk의 auth() 함수를 통해 JWT 토큰 획득
- * - createServerClient 함수를 사용하여 서버 환경에 최적화된 Supabase 클라이언트 생성
  * - 일반 사용자용 클라이언트는 익명 키 + Clerk JWT 사용
  * - 관리자용 클라이언트는 서비스 롤 키 사용 (RLS 우회)
  *
  * @dependencies
- * - @supabase/ssr
- * - next/headers
+ * - @supabase/supabase-js
  * - @clerk/nextjs/server
  */
 
 "use server";
 
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { auth } from "@clerk/nextjs/server";
 
 /**
@@ -34,39 +31,19 @@ import { auth } from "@clerk/nextjs/server";
  *
  * 사용 방법:
  * ```tsx
- * const supabase = await createServerSupabaseClient();
+ * const supabase = await createClient();
  * const { data } = await supabase.from('table').select();
  * ```
  *
  * @returns Clerk JWT 토큰이 통합된 Supabase 클라이언트
  */
-export async function createServerSupabaseClient() {
-  const cookieStore = await cookies();
+export async function createClient() {
   const { getToken } = await auth();
 
-  return createServerClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch {
-            // Server Component에서 호출 시 쿠키 설정 불가 (무시)
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-          } catch {
-            // Server Component에서 호출 시 쿠키 삭제 불가 (무시)
-          }
-        },
-      },
       global: {
         fetch: async (url: RequestInfo | URL, options: RequestInit = {}) => {
           const token = await getToken();
@@ -99,9 +76,9 @@ export async function createServerSupabaseClient() {
  * @returns {Promise<SupabaseClient>} 관리자 권한을 가진 Supabase 클라이언트 인스턴스
  * @throws {Error} 필요한 환경 변수가 설정되지 않은 경우 오류 발생
  */
-
-export async function createServerSupabaseAdminClient() {
+export async function createAdminClient() {
   const cookieStore = await cookies();
+
   if (!process.env.SUPABASE_SERVICE_ROLE) {
     throw new Error(
       "Environment variable SUPABASE_SERVICE_ROLE is required for admin client",
