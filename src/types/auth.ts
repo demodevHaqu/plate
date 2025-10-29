@@ -24,7 +24,21 @@
  */
 
 import { z } from "zod";
-import { isPasswordValid } from "@/components/auth/password-requirements";
+
+// 비밀번호 유효성 검사 함수
+function isPasswordValid(password: string): boolean {
+  // 최소 6자 이상
+  if (password.length < 6) return false;
+
+  // 영문자 포함 확인
+  const hasLetter = /[a-zA-Z]/.test(password);
+  // 숫자 포함 확인
+  const hasNumber = /\d/.test(password);
+  // 특수문자 포함 확인
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  return hasLetter && hasNumber && hasSpecial;
+}
 
 // 로그인 폼 스키마
 export const loginSchema = z.object({

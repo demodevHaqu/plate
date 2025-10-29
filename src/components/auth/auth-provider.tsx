@@ -25,13 +25,12 @@
 
 import { createContext, useContext } from "react";
 import { useUser } from "@clerk/nextjs";
-import type { User } from "@clerk/nextjs/server";
 
 /**
  * Clerk 기반 인증 컨텍스트 타입
  */
 type AuthContextType = {
-  user: User | null | undefined;
+  user: ReturnType<typeof useUser>["user"];
   isLoading: boolean;
   isSignedIn: boolean | undefined;
 };

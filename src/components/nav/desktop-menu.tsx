@@ -39,7 +39,10 @@ export default function DesktopMenu() {
       {user && (
         <div className="text-sm mr-2">
           <span className="hidden md:inline">환영합니다, </span>
-          <span className="font-medium">{user.email?.split("@")[0]}</span>님
+          <span className="font-medium">
+            {user.emailAddresses?.[0]?.emailAddress?.split("@")[0] || "사용자"}
+          </span>
+          님
         </div>
       )}
 
