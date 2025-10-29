@@ -1,0 +1,722 @@
+---
+description: Cursor IDE에서 MCP를 활용한 토스페이먼츠 통합 가이드. 이 규칙은 베스트 프랙티스, 에러 처리, 보안 고려사항을 포함한 토스페이먼츠 결제 시스템 통합을 위한 포괄적인 가이드라인을 제공합니다.
+globs: **/*.js,**/*.jsx,**/*.ts,**/*.tsx,**/payment/**,**/checkout/**
+alwaysApply: false
+---
+
+# 토스페이먼츠 연동 가이드 for Cursor
+
+이 문서는 Cursor IDE에서 MCP (Model Context Protocol) 지원을 활용하여 토스페이먼츠를 애플리케이션에 통합하는 포괄적인 가이드라인을 제공합니다.
+
+## 🎯 핵심 통합 원칙
+
+### 반드시 따라야 할 규칙:
+1. **보안 우선**: 클라이언트 코드에서 시크릿 키를 절대 노출하지 않기
+2. **에러 처리**: 결제 플로우에 대한 포괄적인 에러 처리 구현하기
+3. **검증**: 클라이언트와 서버 양쪽에서 모든 결제 데이터 검증하기
+4. **사용자 경험**: 결제 프로세스의 모든 단계에서 명확한 피드백 제공하기
+5. **문서 참조**: 공식 토스페이먼츠 문서 참조 https://docs.tosspayments.com
+
+## 📦 설치 및 설정
+
+### 필수 의존성
+
+```bash
+# 결제위젯용 (권장)
+npm install @tosspayments/payment-widget-sdk
+
+# 결제창용 (대안)
+npm install @tosspayments/payment-sdk
+
+# 브랜드페이용 (자체 간편결제)
+npm install @tosspayments/brandpay-sdk
+```
+
+### 환경 변수
+
+민감한 키는 반드시 환경 변수에 저장하세요:
+
+```bash
+# .env.local (이 파일은 절대 커밋하지 마세요)
+NEXT_PUBLIC_TOSS_CLIENT_KEY=test_ck_XXXXXXXXXXXXX  # 클라이언트 키 (공개)
+TOSS_SECRET_KEY=test_sk_XXXXXXXXXXXXX             # 시크릿 키 (절대 노출 금지)
+TOSS_WIDGET_CLIENT_KEY=test_gck_XXXXXXXXXXXXX     # 위젯 클라이언트 키 (공개)
+
+# 프로덕션에서는 'test_' 접두사 제거
+```
+
+**보안 규칙:**
+- ✅ 클라이언트 키(`NEXT_PUBLIC_*`)는 프론트엔드에서 사용 가능
+- ❌ 시크릿 키는 반드시 서버 사이드 코드에서만 사용 (API 라우트, 서버 액션)
+- ❌ 시크릿 키를 절대 로그에 남기지 않기
+- ❌ `.env.local`을 버전 관리에 절대 커밋하지 않기
+
+## 🎨 결제위젯 통합 (권장)
+
+결제위젯은 대부분의 사용 사례에 권장되는 방식입니다. 다음을 제공합니다:
+- 사전 구축된 최적화된 UI 컴포넌트
+- 자동 PCI-DSS 준수
+- 어드민 패널을 통한 쉬운 커스터마이징
+- 다양한 결제수단 지원
+
+### 기본 위젯 설정
+
+```typescript
+// app/checkout/page.tsx
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { loadPaymentWidget, PaymentWidgetInstance } from '@tosspayments/payment-widget-sdk';
+
+export default function CheckoutPage() {
+  const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
+  const paymentMethodsWidgetRef = useRef<ReturnType<PaymentWidgetInstance['renderPaymentMethods']> | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        // 1. 결제위젯 로드
+        const paymentWidget = await loadPaymentWidget(
+          process.env.NEXT_PUBLIC_TOSS_WIDGET_CLIENT_KEY!,
+          'CUSTOMER_KEY' // 고유한 고객 식별자 (유저 ID, 이메일 등)
+        );
+
+        paymentWidgetRef.current = paymentWidget;
+
+        // 2. 결제수단 UI 렌더링
+        const paymentMethodsWidget = paymentWidget.renderPaymentMethods(
+          '#payment-widget',
+          { value: 50000 }, // 결제 금액 (원)
+          { variantKey: 'DEFAULT' } // 어드민에서 설정한 UI 변형
+        );
+
+        paymentMethodsWidgetRef.current = paymentMethodsWidget;
+
+        // 3. 이용약관 체크박스 렌더링
+        paymentWidget.renderAgreement('#agreement');
+
+      } catch (error) {
+        console.error('결제위젯 로드 실패:', error);
+        // 사용자 친화적인 에러 메시지 표시
+      }
+    })();
+  }, []);
+
+  const handlePayment = async () => {
+    const paymentWidget = paymentWidgetRef.current;
+
+    if (!paymentWidget) {
+      alert('결제 위젯을 불러오는 중입니다. 잠시만 기다려주세요.');
+      return;
+    }
+
+    try {
+      // 결제 요청
+      await paymentWidget.requestPayment({
+        orderId: generateOrderId(), // 고유한 주문 ID (6-64자)
+        orderName: '토스 티셔츠 외 2건',
+        customerName: '김토스',
+        customerEmail: 'customer@example.com',
+        customerMobilePhone: '01012341234',
+        successUrl: `${window.location.origin}/payment/success`,
+        failUrl: `${window.location.origin}/payment/fail`,
+      });
+    } catch (error) {
+      console.error('결제 요청 실패:', error);
+      // 결제 요청 에러 처리
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">주문/결제</h1>
+
+      {/* 결제수단이 여기에 렌더링됩니다 */}
+      <div id="payment-widget" className="mb-4" />
+
+      {/* 이용약관 체크박스가 여기에 렌더링됩니다 */}
+      <div id="agreement" className="mb-4" />
+
+      <button
+        onClick={handlePayment}
+        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
+      >
+        결제하기
+      </button>
+    </div>
+  );
+}
+
+// 고유한 주문 ID 생성 (자체 로직 구현)
+function generateOrderId(): string {
+  return `ORDER_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+```
+
+### 성공 페이지 - 결제 검증
+
+**중요**: 사기 방지를 위해 반드시 서버 측에서 결제를 검증하세요!
+
+```typescript
+// app/payment/success/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+export default function PaymentSuccessPage() {
+  const searchParams = useSearchParams();
+  const [verifying, setVerifying] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const verifyPayment = async () => {
+      const paymentKey = searchParams.get('paymentKey');
+      const orderId = searchParams.get('orderId');
+      const amount = searchParams.get('amount');
+
+      if (!paymentKey || !orderId || !amount) {
+        setError('결제 정보가 올바르지 않습니다.');
+        setVerifying(false);
+        return;
+      }
+
+      try {
+        // API 라우트를 호출하여 결제 검증
+        const response = await fetch('/api/payment/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentKey, orderId, amount }),
+        });
+
+        if (!response.ok) {
+          throw new Error('결제 검증에 실패했습니다.');
+        }
+
+        const data = await response.json();
+
+        // 결제 검증 성공
+        setVerifying(false);
+
+      } catch (err) {
+        console.error('결제 검증 실패:', err);
+        setError('결제 검증 중 오류가 발생했습니다.');
+        setVerifying(false);
+      }
+    };
+
+    verifyPayment();
+  }, [searchParams]);
+
+  if (verifying) {
+    return <div>결제 정보를 확인하는 중입니다...</div>;
+  }
+
+  if (error) {
+    return <div>오류: {error}</div>;
+  }
+
+  return (
+    <div>
+      <h1>결제가 완료되었습니다!</h1>
+      <p>주문번호: {searchParams.get('orderId')}</p>
+    </div>
+  );
+}
+```
+
+### 서버 측 결제 검증 (API 라우트)
+
+```typescript
+// app/api/payment/verify/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  try {
+    const { paymentKey, orderId, amount } = await request.json();
+
+    // 1. 입력값 검증
+    if (!paymentKey || !orderId || !amount) {
+      return NextResponse.json(
+        { error: '필수 파라미터가 누락되었습니다' },
+        { status: 400 }
+      );
+    }
+
+    // 2. 토스페이먼츠 API 호출하여 결제 승인
+    const secretKey = process.env.TOSS_SECRET_KEY!;
+    const encodedKey = Buffer.from(`${secretKey}:`).toString('base64');
+
+    const response = await fetch(
+      'https://api.tosspayments.com/v1/payments/confirm',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${encodedKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentKey,
+          orderId,
+          amount: Number(amount),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('토스페이먼츠 API 에러:', errorData);
+      return NextResponse.json(
+        { error: errorData.message || '결제 승인 실패' },
+        { status: response.status }
+      );
+    }
+
+    const paymentData = await response.json();
+
+    // 3. 결제 데이터 검증
+    if (paymentData.orderId !== orderId || paymentData.totalAmount !== Number(amount)) {
+      console.error('결제 데이터 불일치:', { expected: { orderId, amount }, received: paymentData });
+      return NextResponse.json(
+        { error: '결제 데이터 불일치' },
+        { status: 400 }
+      );
+    }
+
+    // 4. 데이터베이스에 결제 데이터 저장
+    // await db.payments.create({ ...paymentData });
+
+    // 5. 성공 응답 반환
+    return NextResponse.json({
+      success: true,
+      payment: paymentData,
+    });
+
+  } catch (error) {
+    console.error('결제 검증 에러:', error);
+    return NextResponse.json(
+      { error: '내부 서버 오류' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## 💳 결제수단 지원
+
+### 카드 결제
+```typescript
+// 결제위젯에서 자동으로 지원됨
+// 할부 옵션은 어드민 패널에서 설정 가능
+```
+
+### 가상계좌
+```typescript
+// 입금 알림을 받기 위해 웹훅 설정 필요
+// 토스페이먼츠 어드민에서 웹훅 URL 설정: https://developers.tosspayments.com
+
+// 웹훅 핸들러 예제
+// app/api/payment/webhook/route.ts
+export async function POST(request: NextRequest) {
+  const webhookData = await request.json();
+
+  if (webhookData.eventType === 'PAYMENT_STATUS_CHANGED') {
+    // 가상계좌 입금 완료
+    const { orderId, status } = webhookData.data;
+
+    if (status === 'DONE') {
+      // 데이터베이스에서 주문 상태 업데이트
+      // 고객에게 확인 이메일 발송
+    }
+  }
+
+  return NextResponse.json({ received: true });
+}
+```
+
+### 휴대폰 결제
+```typescript
+// 결제위젯에서 자동으로 지원됨
+// 일부 가맹점은 연령 인증 필요
+```
+
+### 간편결제
+```typescript
+// 지원: 토스페이, 네이버페이, 카카오페이, 삼성페이 등
+// 어드민에서 설정 시 자동으로 사용 가능
+```
+
+### PayPal 통합
+```typescript
+// 결제위젯에서 PayPal 활성화
+const paymentWidget = await loadPaymentWidget(
+  clientKey,
+  customerKey,
+  { locale: 'en' } // 해외 고객을 위한 영어 설정
+);
+
+// PayPal이 자동으로 결제 옵션으로 표시됨
+```
+
+## 🔄 자동결제(빌링) / 구독
+
+### 빌링키 발급
+
+```typescript
+// app/billing/register/page.tsx
+'use client';
+
+import { loadBillingWidget } from '@tosspayments/billing-widget-sdk';
+
+export default function RegisterBillingPage() {
+  const handleRegisterBilling = async () => {
+    try {
+      const billingWidget = await loadBillingWidget(
+        process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!,
+        'CUSTOMER_KEY'
+      );
+
+      await billingWidget.requestBillingAuth({
+        method: 'CARD', // 또는 계좌이체의 경우 'TRANSFER'
+        successUrl: `${window.location.origin}/billing/success`,
+        failUrl: `${window.location.origin}/billing/fail`,
+        customerEmail: 'customer@example.com',
+        customerName: '김토스',
+      });
+    } catch (error) {
+      console.error('빌링 등록 실패:', error);
+    }
+  };
+
+  return (
+    <button onClick={handleRegisterBilling}>
+      카드 등록하기
+    </button>
+  );
+}
+```
+
+### 빌링 결제 처리 (서버 측)
+
+```typescript
+// app/api/billing/charge/route.ts
+export async function POST(request: NextRequest) {
+  const { billingKey, amount, orderId, orderName } = await request.json();
+
+  const secretKey = process.env.TOSS_SECRET_KEY!;
+  const encodedKey = Buffer.from(`${secretKey}:`).toString('base64');
+
+  const response = await fetch(
+    `https://api.tosspayments.com/v1/billing/${billingKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${encodedKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount,
+        orderId,
+        orderName,
+        customerName: '김토스',
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return NextResponse.json({ error: data }, { status: response.status });
+  }
+
+  return NextResponse.json({ success: true, payment: data });
+}
+```
+
+## 🔐 보안 베스트 프랙티스
+
+### 1. API 키 관리
+```typescript
+// ✅ 좋음 - 서버 측에서만 사용
+const secretKey = process.env.TOSS_SECRET_KEY;
+
+// ❌ 나쁨 - 클라이언트 측에서 절대 사용 금지
+const secretKey = 'test_sk_XXXXXXXXXXXXX';
+```
+
+### 2. 결제 금액 검증
+```typescript
+// 결제 금액이 데이터베이스와 일치하는지 항상 검증
+async function verifyPayment(orderId: string, receivedAmount: number) {
+  const order = await db.orders.findUnique({ where: { id: orderId } });
+
+  if (order.totalAmount !== receivedAmount) {
+    throw new Error('금액 불일치 - 사기 시도 가능성');
+  }
+
+  return true;
+}
+```
+
+### 3. 멱등성 보장
+```typescript
+// 중복 결제 방지를 위한 멱등성 키 사용
+const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+  headers: {
+    'Idempotency-Key': `payment-${orderId}-${Date.now()}`,
+    // ... 기타 헤더
+  },
+  // ... 나머지 요청
+});
+```
+
+## ❌ 에러 처리
+
+### 일반적인 에러 코드
+
+```typescript
+const TOSS_ERROR_CODES = {
+  // 결제 에러
+  'INVALID_CARD_NUMBER': '유효하지 않은 카드번호입니다.',
+  'INVALID_CARD_EXPIRATION': '카드 유효기간을 확인해주세요.',
+  'INVALID_CARD_INSTALLMENT_PLAN': '할부 개월 수가 올바르지 않습니다.',
+  'NOT_ENOUGH_BALANCE': '잔액이 부족합니다.',
+  'EXCEED_MAX_AMOUNT': '결제 가능 금액을 초과했습니다.',
+
+  // 빌링 에러
+  'ALREADY_REGISTERED_BILLING_KEY': '이미 등록된 카드입니다.',
+  'INVALID_BILLING_KEY': '유효하지 않은 빌링키입니다.',
+
+  // 공통 에러
+  'INVALID_REQUEST': '잘못된 요청입니다.',
+  'UNAUTHORIZED': '인증에 실패했습니다.',
+  'NOT_FOUND': '존재하지 않는 결제입니다.',
+} as const;
+
+// 에러 처리 래퍼
+async function handleTossPaymentError(error: any) {
+  const errorCode = error.code;
+  const message = TOSS_ERROR_CODES[errorCode as keyof typeof TOSS_ERROR_CODES]
+    || '결제 처리 중 오류가 발생했습니다.';
+
+  // 디버깅을 위한 에러 로그
+  console.error('토스페이먼츠 에러:', { code: errorCode, message: error.message });
+
+  // 사용자 친화적인 메시지 표시
+  return message;
+}
+```
+
+## 🧪 테스트
+
+### 테스트 카드 번호
+
+```typescript
+// 테스트 모드 카드 번호 (샌드박스 환경에서 사용)
+const TEST_CARDS = {
+  SUCCESS: '4330123456789012', // 결제 성공
+  FAIL_INVALID: '4330123456789013', // 유효하지 않은 카드
+  FAIL_BALANCE: '4330123456789014', // 잔액 부족
+  FAIL_LIMIT: '4330123456789015', // 한도 초과
+};
+
+// 테스트 자격증명 형식
+const TEST_CLIENT_KEY = 'test_ck_XXXXXXXXXXXXX';
+const TEST_SECRET_KEY = 'test_sk_XXXXXXXXXXXXX';
+```
+
+### 테스트 체크리스트
+
+- [ ] 결제위젯이 올바르게 로드됨
+- [ ] 모든 결제수단이 표시됨
+- [ ] 결제 성공 플로우가 작동함
+- [ ] 결제 실패가 우아하게 처리됨
+- [ ] 서버 측 검증이 작동함
+- [ ] 웹훅이 알림을 받음 (가상계좌용)
+- [ ] 에러 메시지가 사용자 친화적임
+- [ ] 모바일 반응형 디자인
+- [ ] 빌링키 등록이 작동함
+- [ ] 자동 결제 처리가 작동함
+
+## 📱 모바일 & 웹뷰 통합
+
+### 웹뷰 설정
+
+```typescript
+// React Native WebView용
+import { WebView } from 'react-native-webview';
+
+<WebView
+  source={{ uri: 'https://your-domain.com/checkout' }}
+  onNavigationStateChange={(navState) => {
+    // 앱 스킴 리다이렉트 처리
+    if (navState.url.startsWith('supertoss://')) {
+      // 토스페이 앱 스킴 처리
+      Linking.openURL(navState.url);
+      return false;
+    }
+  }}
+  onShouldStartLoadWithRequest={(request) => {
+    // 결제 앱 스킴 처리
+    const schemes = ['ispmobile://', 'hdcardappcardansimclick://', 'shinhan-sr-ansimclick://'];
+
+    for (const scheme of schemes) {
+      if (request.url.startsWith(scheme)) {
+        Linking.openURL(request.url);
+        return false;
+      }
+    }
+
+    return true;
+  }}
+/>
+```
+
+## 🔄 결제 취소
+
+### 전체/부분 환불
+
+```typescript
+// app/api/payment/cancel/route.ts
+export async function POST(request: NextRequest) {
+  const { paymentKey, cancelReason, cancelAmount } = await request.json();
+
+  const secretKey = process.env.TOSS_SECRET_KEY!;
+  const encodedKey = Buffer.from(`${secretKey}:`).toString('base64');
+
+  const response = await fetch(
+    `https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${encodedKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        cancelReason,
+        // 부분 환불의 경우 cancelAmount 포함, 전체 환불의 경우 생략
+        ...(cancelAmount && { cancelAmount }),
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return NextResponse.json({ error: data }, { status: response.status });
+  }
+
+  return NextResponse.json({ success: true, cancellation: data });
+}
+```
+
+## 📊 세금 처리
+
+### 면세 상품
+
+```typescript
+// 면세 상품으로 결제 요청 시
+await paymentWidget.requestPayment({
+  orderId: 'ORDER_123',
+  orderName: '도서 구매',
+  amount: 10000,
+  taxFreeAmount: 10000, // 도서는 전액 면세
+  // ... 기타 파라미터
+});
+```
+
+## 🎯 일반적인 통합 패턴
+
+### 패턴 1: 이커머스 체크아웃
+
+```typescript
+// 1. 데이터베이스에 주문 생성
+const order = await createOrder({ items, userId });
+
+// 2. 주문 금액으로 결제위젯 초기화
+const paymentWidget = await loadPaymentWidget(clientKey, userId);
+paymentWidget.renderPaymentMethods('#payment-widget', {
+  value: order.totalAmount
+});
+
+// 3. 주문 상세정보로 결제 요청
+await paymentWidget.requestPayment({
+  orderId: order.id,
+  orderName: order.name,
+  amount: order.totalAmount,
+  // ... 리다이렉트 URL
+});
+
+// 4. 성공 페이지에서 결제 검증
+// 5. 주문 상태 업데이트
+// 6. 확인 이메일 발송
+```
+
+### 패턴 2: 구독 서비스
+
+```typescript
+// 1. 빌링키 등록 (최초 1회)
+const billingKey = await registerBillingKey(userId);
+
+// 2. 자동 결제 스케줄링
+cron.schedule('0 0 1 * *', async () => {
+  const subscriptions = await getActiveSubscriptions();
+
+  for (const sub of subscriptions) {
+    await chargeBilling({
+      billingKey: sub.billingKey,
+      amount: sub.plan.price,
+      orderId: generateOrderId(),
+    });
+  }
+});
+```
+
+## 🔧 문제 해결
+
+### 일반적인 문제
+
+1. **결제위젯이 로드되지 않음**
+   - 클라이언트 키가 올바른지 확인
+   - 네트워크 연결 확인
+   - 브라우저 콘솔에서 에러 확인
+   - CDN이 차단되지 않았는지 확인
+
+2. **결제 검증 실패**
+   - 시크릿 키가 올바른지 확인
+   - API 엔드포인트에 접근 가능한지 확인
+   - 금액이 정확히 일치하는지 확인
+   - 서버 로그에서 자세한 에러 확인
+
+3. **웹훅을 받지 못함**
+   - 웹훅 URL이 공개적으로 접근 가능한지 확인
+   - 어드민에 웹훅이 등록되어 있는지 확인
+   - 엔드포인트가 200 상태를 반환하는지 확인
+   - 방화벽 설정 확인
+
+## 📚 추가 리소스
+
+- 공식 문서: https://docs.tosspayments.com
+- API 레퍼런스: https://docs.tosspayments.com/reference
+- 어드민 대시보드: https://dashboard.tosspayments.com
+- 개발자센터: https://developers.tosspayments.com
+- LLM 통합 가이드: https://docs.tosspayments.com/guides/v2/get-started/llms-guide
+- 코드 예제: https://github.com/tosspayments
+
+## 🚀 빠른 시작 체크리스트
+
+- [ ] 필수 의존성 설치
+- [ ] 환경 변수 설정
+- [ ] 결제위젯으로 체크아웃 페이지 구현
+- [ ] 성공/실패 리다이렉트 페이지 생성
+- [ ] 서버 측 결제 검증 구현
+- [ ] 웹훅 엔드포인트 설정 (가상계좌 사용 시)
+- [ ] 테스트 카드로 테스트
+- [ ] 프로덕션 키 설정
+- [ ] 배포 후 프로덕션에서 테스트
+
+---
+
+**기억하세요**: 프로덕션 배포 전에 샌드박스 환경에서 철저히 테스트하세요!
+
+Cursor 사용자를 위한 팁: 결제 기능 구현 시 최신 통합 패턴을 위해 @tosspayments를 참조하여 MCP 컨텍스트를 활용하세요.

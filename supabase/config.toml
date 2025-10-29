@@ -272,8 +272,9 @@ enabled = false
 # Use Clerk as a third-party provider alongside Supabase Auth.
 [auth.third_party.clerk]
 enabled = false
-# Obtain from https://clerk.com/setup/supabase
-# domain = "example.clerk.accounts.dev"
+# TODO: Clerk Dashboard에서 도메인을 확인하고 아래 주석을 해제한 후 실제 도메인으로 변경하세요
+# 예: your-app-name.clerk.accounts.dev
+# domain = "{본인 clerk 도메인 주소}"
 
 [edge_runtime]
 enabled = true

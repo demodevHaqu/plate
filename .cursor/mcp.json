@@ -15,6 +15,10 @@
     "supabase": {
       "command": "bun x",
       "args": ["@supabase/mcp-server-supabase@latest", "--access-token", "your_supabase_access_token"]
+    },
+    "tosspayments": {
+      "command": "npx",
+      "args": ["-y", "@tosspayments/integration-guide-mcp@latest"]
     }
   }
 }

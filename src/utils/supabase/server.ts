@@ -1,33 +1,48 @@
 /**
  * @file server.ts
- * @description Supabase 서버 클라이언트 초기화 유틸리티
+ * @description Clerk 인증과 통합된 Supabase 서버 클라이언트 초기화 유틸리티
  *
- * 이 파일은 서버 측에서 Supabase 서비스에 접근하기 위한 클라이언트를 생성합니다.
- * 일반 클라이언트와 관리자 권한 클라이언트 두 가지 버전을 제공합니다.
+ * 이 파일은 서버 측에서 Clerk JWT 토큰을 사용하여 Supabase 서비스에 접근하기 위한
+ * 클라이언트를 생성합니다. 일반 클라이언트와 관리자 권한 클라이언트 두 가지 버전을 제공합니다.
  *
  * 주요 기능:
- * 1. 서버 컴포넌트에서 사용할 Supabase 클라이언트 생성
- * 2. 서버 액션에서 사용할 Supabase 클라이언트 생성
+ * 1. 서버 컴포넌트에서 사용할 Supabase 클라이언트 생성 (Clerk JWT 통합)
+ * 2. 서버 액션에서 사용할 Supabase 클라이언트 생성 (Clerk JWT 통합)
  * 3. 관리자 권한(service role)을 가진 Supabase 클라이언트 생성
  *
  * 구현 로직:
  * - Next.js의 cookies API를 사용하여 쿠키 관리
+ * - Clerk의 auth() 함수를 통해 JWT 토큰 획득
  * - createServerClient 함수를 사용하여 서버 환경에 최적화된 Supabase 클라이언트 생성
- * - 일반 사용자용 클라이언트는 익명 키 사용
- * - 관리자용 클라이언트는 서비스 롤 키 사용
+ * - 일반 사용자용 클라이언트는 익명 키 + Clerk JWT 사용
+ * - 관리자용 클라이언트는 서비스 롤 키 사용 (RLS 우회)
  *
  * @dependencies
  * - @supabase/ssr
  * - next/headers
+ * - @clerk/nextjs/server
  */
 
 "use server";
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
 
+/**
+ * Clerk 인증과 통합된 Supabase 서버 클라이언트 생성
+ *
+ * 사용 방법:
+ * ```tsx
+ * const supabase = await createServerSupabaseClient();
+ * const { data } = await supabase.from('table').select();
+ * ```
+ *
+ * @returns Clerk JWT 토큰이 통합된 Supabase 클라이언트
+ */
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies();
+  const { getToken } = await auth();
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,10 +53,33 @@ export async function createServerSupabaseClient() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {
+            // Server Component에서 호출 시 쿠키 설정 불가 (무시)
+          }
         },
         remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+          try {
+            cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+          } catch {
+            // Server Component에서 호출 시 쿠키 삭제 불가 (무시)
+          }
+        },
+      },
+      global: {
+        fetch: async (url: RequestInfo | URL, options: RequestInit = {}) => {
+          const token = await getToken();
+
+          const headers = new Headers(options?.headers || {});
+          if (token) {
+            headers.set("Authorization", `Bearer ${token}`);
+          }
+
+          return fetch(url, {
+            ...options,
+            headers,
+          });
         },
       },
     },
@@ -79,10 +117,18 @@ export async function createServerSupabaseAdminClient() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {
+            // 무시
+          }
         },
         remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+          try {
+            cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+          } catch {
+            // 무시
+          }
         },
       },
     },
