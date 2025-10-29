@@ -64,6 +64,14 @@ export async function createClient() {
 }
 
 /**
+ * createClient의 별칭 함수 (하위 호환성을 위해)
+ *
+ * @deprecated createClient를 사용하세요
+ * @returns Clerk JWT 토큰이 통합된 Supabase 클라이언트
+ */
+export const createServerSupabaseClient = createClient;
+
+/**
  * Supabase 관리자 클라이언트를 생성합니다. (Service Role)
  *
  * 중요: 이 클라이언트는 `SUPABASE_SERVICE_ROLE` 키를 사용하며,

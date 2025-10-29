@@ -27,6 +27,7 @@ import { Product } from "@/types/payment";
 import { CheckoutForm } from "@/components/payment/checkout-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { createMetadata } from "@/utils/seo/metadata";
+import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 
 interface CheckoutPageProps {
@@ -116,10 +117,12 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
                 <div className="space-y-4">
                   {typedProduct.image_url && (
                     <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
-                      <img
+                      <Image
                         src={typedProduct.image_url}
                         alt={typedProduct.name}
-                        className="object-cover w-full h-full"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />
                     </div>
                   )}
@@ -172,4 +175,3 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
     </div>
   );
 }
-

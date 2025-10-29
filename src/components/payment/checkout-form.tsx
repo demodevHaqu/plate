@@ -26,7 +26,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   initializePaymentWindow,
   generateOrderId,
@@ -48,7 +47,6 @@ interface CheckoutFormProps {
 }
 
 export function CheckoutForm({ product, userId }: CheckoutFormProps) {
-  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const paymentRef = useRef<TossPaymentsPayment | null>(null);
@@ -198,13 +196,10 @@ export function CheckoutForm({ product, userId }: CheckoutFormProps) {
         <ul className="space-y-1 text-muted-foreground">
           <li>• 테스트 환경으로 실제 결제가 이루어지지 않습니다.</li>
           <li>• 결제창에서 다양한 결제 수단을 선택할 수 있습니다.</li>
-          <li>
-            • 카드 결제 테스트 시 아무 카드번호나 입력하면 가능합니다.
-          </li>
+          <li>• 카드 결제 테스트 시 아무 카드번호나 입력하면 가능합니다.</li>
           <li>• API 개별 연동 방식으로 구현되었습니다.</li>
         </ul>
       </div>
     </div>
   );
 }
-

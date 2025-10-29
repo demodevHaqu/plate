@@ -23,7 +23,6 @@
 import { redirect } from "next/navigation";
 import { confirmPaymentAction } from "@/actions/payment";
 import { PaymentResult } from "@/components/payment/payment-result";
-import { Card, CardContent } from "@/components/ui/card";
 import { createMetadata } from "@/utils/seo/metadata";
 
 export const metadata = createMetadata({
@@ -74,7 +73,7 @@ export default async function PaymentSuccessPage({
     console.groupEnd();
 
     const errorMessage = encodeURIComponent(
-      result.error || "결제 승인에 실패했습니다"
+      result.error || "결제 승인에 실패했습니다",
     );
     const errorCode = result.errorCode ? `&code=${result.errorCode}` : "";
     redirect(`/payment/fail?message=${errorMessage}${errorCode}`);
@@ -91,4 +90,3 @@ export default async function PaymentSuccessPage({
     </div>
   );
 }
-

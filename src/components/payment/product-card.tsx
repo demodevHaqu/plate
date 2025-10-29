@@ -17,6 +17,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Product } from "@/types/payment";
 import {
   Card,
@@ -44,10 +45,12 @@ export function ProductCard({ product }: ProductCardProps) {
       <CardHeader>
         {product.image_url && (
           <div className="aspect-square relative mb-4 overflow-hidden rounded-lg bg-gray-100">
-            <img
+            <Image
               src={product.image_url}
               alt={product.name}
-              className="object-cover w-full h-full"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>
         )}
@@ -69,4 +72,3 @@ export function ProductCard({ product }: ProductCardProps) {
     </Card>
   );
 }
-
