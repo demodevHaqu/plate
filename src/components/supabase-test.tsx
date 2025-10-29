@@ -196,7 +196,7 @@ export function SupabaseTest() {
     console.log("🏁 Supabase 연결 테스트 완료");
     console.groupEnd();
     setIsRunning(false);
-  }, [supabase]);
+  }, [supabase]); // supabase 의존성 추가
 
   // 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
@@ -222,7 +222,7 @@ export function SupabaseTest() {
     if (supabase) {
       runTests();
     }
-  }, [supabase, runTests]); // runTests도 의존성에 추가
+  }, [supabase, runTests]); // supabase와 runTests 의존성 추가
 
   const getStatusIcon = (status: TestResult["status"]) => {
     switch (status) {
