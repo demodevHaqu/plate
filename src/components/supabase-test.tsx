@@ -53,9 +53,11 @@ export function SupabaseTest() {
   const supabase = useSupabaseClient();
 
   const runTests = useCallback(async () => {
+    console.group("🔍 Supabase 연결 테스트 시작");
     setIsRunning(true);
 
     // 테스트 1: 클라이언트 초기화
+    console.log("✅ Supabase 클라이언트 초기화 확인");
     setTests((prev) =>
       prev.map((test) =>
         test.name === "Supabase 클라이언트 초기화"
@@ -70,12 +72,14 @@ export function SupabaseTest() {
 
     // 테스트 2: 데이터베이스 연결
     try {
+      console.log("🔗 데이터베이스 연결 테스트 중...");
       const { error } = await supabase
         .from("_supabase_migrations")
         .select("version")
         .limit(1);
 
       if (error) {
+        console.error("❌ 데이터베이스 연결 실패:", error.message);
         setTests((prev) =>
           prev.map((test) =>
             test.name === "데이터베이스 연결"
@@ -89,6 +93,7 @@ export function SupabaseTest() {
           ),
         );
       } else {
+        console.log("✅ 데이터베이스 연결 성공");
         setTests((prev) =>
           prev.map((test) =>
             test.name === "데이터베이스 연결"
@@ -102,6 +107,7 @@ export function SupabaseTest() {
         );
       }
     } catch (error) {
+      console.error("❌ 데이터베이스 연결 오류:", error);
       setTests((prev) =>
         prev.map((test) =>
           test.name === "데이터베이스 연결"
@@ -118,12 +124,14 @@ export function SupabaseTest() {
 
     // 테스트 3: 인증 상태 확인
     try {
+      console.log("🔐 인증 상태 확인 중...");
       const {
         data: { user },
         error,
       } = await supabase.auth.getUser();
 
       if (error) {
+        console.error("❌ 인증 상태 확인 실패:", error.message);
         setTests((prev) =>
           prev.map((test) =>
             test.name === "인증 상태 확인"
@@ -137,6 +145,7 @@ export function SupabaseTest() {
           ),
         );
       } else if (user) {
+        console.log("✅ 사용자 로그인됨:", user.email || user.id);
         setTests((prev) =>
           prev.map((test) =>
             test.name === "인증 상태 확인"
@@ -149,6 +158,7 @@ export function SupabaseTest() {
           ),
         );
       } else {
+        console.log("ℹ️ 인증되지 않음 (정상)");
         setTests((prev) =>
           prev.map((test) =>
             test.name === "인증 상태 확인"
@@ -162,6 +172,7 @@ export function SupabaseTest() {
         );
       }
     } catch (error) {
+      console.error("❌ 인증 상태 확인 오류:", error);
       setTests((prev) =>
         prev.map((test) =>
           test.name === "인증 상태 확인"
@@ -176,12 +187,18 @@ export function SupabaseTest() {
       );
     }
 
+    console.log("🏁 Supabase 연결 테스트 완료");
+    console.groupEnd();
     setIsRunning(false);
   }, [supabase]);
 
+  // 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
-    runTests();
-  }, [runTests]);
+    // supabase 클라이언트가 존재할 때만 테스트 실행
+    if (supabase) {
+      runTests();
+    }
+  }, []); // 의존성 배열을 비워서 한 번만 실행
 
   const getStatusIcon = (status: TestResult["status"]) => {
     switch (status) {
