@@ -70,12 +70,13 @@ export function SupabaseTest() {
       ),
     );
 
-    // 테스트 2: 데이터베이스 연결
+    // 테스트 2: 데이터베이스 연결 (더 안전한 방법)
     try {
       console.log("🔗 데이터베이스 연결 테스트 중...");
+      // 간단한 쿼리로 연결 테스트 (시스템 테이블 대신 더 안전한 방법 사용)
       const { error } = await supabase
-        .from("_supabase_migrations")
-        .select("version")
+        .from("information_schema.tables")
+        .select("table_name")
         .limit(1);
 
       if (error) {
@@ -125,34 +126,39 @@ export function SupabaseTest() {
     // 테스트 3: 인증 상태 확인
     try {
       console.log("🔐 인증 상태 확인 중...");
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
 
-      if (error) {
-        console.error("❌ 인증 상태 확인 실패:", error.message);
+      // 먼저 현재 세션 상태 확인
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error("❌ 세션 확인 실패:", sessionError.message);
         setTests((prev) =>
           prev.map((test) =>
             test.name === "인증 상태 확인"
               ? {
                   ...test,
                   status: "error",
-                  message: "인증 상태 확인 실패",
-                  details: error.message,
+                  message: "세션 확인 실패",
+                  details: sessionError.message,
                 }
               : test,
           ),
         );
-      } else if (user) {
-        console.log("✅ 사용자 로그인됨:", user.email || user.id);
+      } else if (session?.user) {
+        console.log(
+          "✅ 사용자 로그인됨:",
+          session.user.email || session.user.id,
+        );
         setTests((prev) =>
           prev.map((test) =>
             test.name === "인증 상태 확인"
               ? {
                   ...test,
                   status: "success",
-                  message: `로그인됨: ${user.email || user.id}`,
+                  message: `로그인됨: ${session.user.email || session.user.id}`,
                 }
               : test,
           ),
@@ -194,11 +200,29 @@ export function SupabaseTest() {
 
   // 컴포넌트 마운트 시 한 번만 실행
   useEffect(() => {
+    // 환경 변수 확인
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("❌ Supabase 환경 변수가 설정되지 않았습니다.");
+      setTests((prev) =>
+        prev.map((test) => ({
+          ...test,
+          status: "error",
+          message: "환경 변수 설정 필요",
+          details:
+            "NEXT_PUBLIC_SUPABASE_URL과 NEXT_PUBLIC_SUPABASE_ANON_KEY를 설정해주세요.",
+        })),
+      );
+      return;
+    }
+
     // supabase 클라이언트가 존재할 때만 테스트 실행
     if (supabase) {
       runTests();
     }
-  }, []); // 의존성 배열을 비워서 한 번만 실행
+  }, [supabase, runTests]); // runTests도 의존성에 추가
 
   const getStatusIcon = (status: TestResult["status"]) => {
     switch (status) {
