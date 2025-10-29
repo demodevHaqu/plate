@@ -10,6 +10,7 @@
 
 import { UserButton, SignInButton, useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 
 /**
  * 사용자 네비게이션 컴포넌트
@@ -19,11 +20,16 @@ import { Button } from "@/components/ui/button";
  */
 export default function UserNav() {
   const { isSignedIn, isLoaded } = useUser();
+  const [mounted, setMounted] = useState(false);
 
-  if (!isLoaded) {
-    return (
-      <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
-    );
+  // 클라이언트에서만 마운트 상태를 true로 설정
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // 서버 사이드에서는 항상 로딩 상태를 표시하여 Hydration Mismatch 방지
+  if (!mounted || !isLoaded) {
+    return <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />;
   }
 
   if (!isSignedIn) {
