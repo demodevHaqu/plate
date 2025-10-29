@@ -7,7 +7,7 @@
 
 "use server";
 
-// import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { createServerSupabaseClient } from "@/utils/supabase/server";
 import { z } from "zod";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
