@@ -42,7 +42,7 @@ export async function createClient() {
 
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: {
         fetch: async (url: RequestInfo | URL, options: RequestInit = {}) => {
@@ -77,37 +77,14 @@ export async function createClient() {
  * @throws {Error} 필요한 환경 변수가 설정되지 않은 경우 오류 발생
  */
 export async function createAdminClient() {
-  const cookieStore = await cookies();
-
   if (!process.env.SUPABASE_SERVICE_ROLE) {
     throw new Error(
       "Environment variable SUPABASE_SERVICE_ROLE is required for admin client",
     );
   }
 
-  return createServerClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: any) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch {
-            // 무시
-          }
-        },
-        remove(name: string, options: any) {
-          try {
-            cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-          } catch {
-            // 무시
-          }
-        },
-      },
-    },
   );
 }

@@ -7,7 +7,7 @@
 
 "use server";
 
-import { createServerSupabaseClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server";
 import { z } from "zod";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -36,7 +36,7 @@ const UploadSchema = z.object({
 export async function uploadFile(formData: FormData) {
   try {
     // 인증 없이 Supabase 클라이언트 생성
-    const supabase = await createServerSupabaseClient();
+    const supabase = await createClient();
     const file = formData.get("file") as File;
     let bucketName = formData.get("bucketName") as string;
     if (!bucketName) {
@@ -93,7 +93,7 @@ export async function getUploadUrl(
   }
 
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = await createClient();
 
     // 버킷 이름 기본값 설정
     if (!bucketName) {
