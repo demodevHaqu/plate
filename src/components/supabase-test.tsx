@@ -222,7 +222,7 @@ export function SupabaseTest() {
     if (supabase) {
       runTests();
     }
-  }, [supabase, runTests]); // supabase와 runTests 의존성 추가
+  }, []); // 의존성 배열을 비워서 마운트 시 한 번만 실행
 
   const getStatusIcon = (status: TestResult["status"]) => {
     switch (status) {
