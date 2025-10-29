@@ -1,12 +1,15 @@
 /**
  * @file storage.ts
  * @description Supabase Storage 유틸리티 함수 (공개 버킷)
+ *
+ * 주의: 현재 버킷 설정이 완료되지 않아 임시로 비활성화된 상태입니다.
+ * .env 파일에 NEXT_PUBLIC_STORAGE_BUCKET을 설정한 후 활성화하세요.
  */
 
-import { createBrowserSupabaseClient } from "./client";
+import { createClient } from "./client";
 
-// 환경변수에서 버킷 이름을 읽음
-const BUCKET = process.env.NEXT_PUBLIC_STORAGE_BUCKET || "test-bucket";
+// 환경변수에서 버킷 이름을 읽음 (설정되지 않은 경우 비활성화)
+const BUCKET = process.env.NEXT_PUBLIC_STORAGE_BUCKET;
 
 /**
  * 버킷 내 파일 목록을 조회합니다.
@@ -14,7 +17,15 @@ const BUCKET = process.env.NEXT_PUBLIC_STORAGE_BUCKET || "test-bucket";
  */
 export async function listFiles() {
   try {
-    const supabase = createBrowserSupabaseClient();
+    // 버킷이 설정되지 않은 경우 빈 배열 반환
+    if (!BUCKET) {
+      console.warn(
+        "Storage: 버킷이 설정되지 않았습니다. .env 파일에 NEXT_PUBLIC_STORAGE_BUCKET을 설정하세요.",
+      );
+      return [];
+    }
+
+    const supabase = createClient();
 
     // 루트 경로에서 파일 목록 가져오기
     const { data, error } = await supabase.storage
@@ -42,7 +53,15 @@ export function getPublicUrl(path: string): string {
   try {
     if (!path) return "";
 
-    const supabase = createBrowserSupabaseClient();
+    // 버킷이 설정되지 않은 경우 빈 문자열 반환
+    if (!BUCKET) {
+      console.warn(
+        "Storage: 버킷이 설정되지 않았습니다. .env 파일에 NEXT_PUBLIC_STORAGE_BUCKET을 설정하세요.",
+      );
+      return "";
+    }
+
+    const supabase = createClient();
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
 
     return data?.publicUrl || "";
@@ -65,7 +84,15 @@ export async function deleteFile(
       return { success: false, error: "삭제할 파일 경로가 필요합니다." };
     }
 
-    const supabase = createBrowserSupabaseClient();
+    // 버킷이 설정되지 않은 경우 에러 반환
+    if (!BUCKET) {
+      console.warn(
+        "Storage: 버킷이 설정되지 않았습니다. .env 파일에 NEXT_PUBLIC_STORAGE_BUCKET을 설정하세요.",
+      );
+      return { success: false, error: "버킷이 설정되지 않았습니다." };
+    }
+
+    const supabase = createClient();
     const { error } = await supabase.storage.from(BUCKET).remove([path]);
 
     if (error) {
