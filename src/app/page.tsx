@@ -18,6 +18,7 @@ import { Navbar } from "@/components/nav/navbar";
 import { FileUploader } from "@/components/storage/file-uploader";
 import { FileList } from "@/components/storage/file-list";
 import { SupabaseTest } from "@/components/supabase-test";
+import ImageUpload from "@/components/image-upload";
 
 const BUCKET_NAME = process.env.NEXT_PUBLIC_STORAGE_BUCKET || "test-bucket";
 
@@ -74,7 +75,12 @@ export default function UploadPage() {
           </section>
 
           <section>
-            <h2 className="text-2xl font-bold mb-6">파일 업로드</h2>
+            <h2 className="text-2xl font-bold mb-6">이미지 업로드 (MVP)</h2>
+            <ImageUpload />
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold mb-6">일반 파일 업로드</h2>
 
             <FileUploader
               bucketName={BUCKET_NAME}
